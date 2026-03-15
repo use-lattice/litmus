@@ -93,6 +93,7 @@ import {
   handleTrajectoryToolSequence,
   handleTrajectoryToolUsed,
 } from './trajectory';
+import { createTraceTrajectory } from './trajectoryUtils';
 import { coerceString, getFinalTest, loadFromJavaScriptFile, processFileReference } from './utils';
 import { handleWebhook } from './webhook';
 import { handleWordCount } from './wordCount';
@@ -105,8 +106,10 @@ import type {
   ProviderResponse,
   ScoringFunction,
 } from '../types/index';
+import type { TraceData, TraceTrajectory } from '../types/tracing';
 
 const ASSERTIONS_MAX_CONCURRENCY = getEnvInt('PROMPTFOO_ASSERTIONS_MAX_CONCURRENCY', 3);
+const CUSTOM_SCRIPT_ASSERTION_TYPES = new Set(['javascript', 'python', 'ruby']);
 
 export const MODEL_GRADED_ASSERTION_TYPES = new Set<AssertionType>([
   'answer-relevance',
@@ -260,6 +263,138 @@ export function getAssertionBaseType(assertion: Assertion): AssertionType {
   return inverse ? (assertion.type.slice(4) as AssertionType) : (assertion.type as AssertionType);
 }
 
+interface TraceArtifactNeeds {
+  trace: boolean;
+  trajectory: boolean;
+}
+
+interface SharedTraceArtifacts {
+  attachToContext: (context: AssertionValueFunctionContext) => Promise<void>;
+}
+
+function normalizeTraceData(traceData: TraceData): TraceData {
+  return {
+    traceId: traceData.traceId,
+    evaluationId: traceData.evaluationId,
+    testCaseId: traceData.testCaseId,
+    metadata: traceData.metadata,
+    spans: traceData.spans || [],
+  };
+}
+
+function resolveAssertionScriptPath(assertionValue: string): string | undefined {
+  if (!assertionValue.startsWith('file://')) {
+    return undefined;
+  }
+
+  const basePath = cliState.basePath || '';
+  const fileRef = assertionValue.slice('file://'.length);
+  const colonIndex = fileRef.indexOf(':');
+  const filePath = colonIndex === -1 ? fileRef : fileRef.slice(0, colonIndex);
+  return path.resolve(basePath, filePath);
+}
+
+function getAssertionTraceArtifactNeeds(assertion: Assertion): TraceArtifactNeeds {
+  const baseType = getAssertionBaseType(assertion);
+
+  if (baseType.startsWith('trajectory:')) {
+    return { trace: true, trajectory: true };
+  }
+
+  if (baseType.startsWith('trace-')) {
+    return { trace: true, trajectory: false };
+  }
+
+  if (CUSTOM_SCRIPT_ASSERTION_TYPES.has(baseType)) {
+    return { trace: true, trajectory: true };
+  }
+
+  if (typeof assertion.value === 'string') {
+    if (isPackagePath(assertion.value)) {
+      return { trace: true, trajectory: true };
+    }
+
+    const scriptPath = resolveAssertionScriptPath(assertion.value);
+    const isScriptFile =
+      scriptPath &&
+      (isJavascriptFile(scriptPath) || scriptPath.endsWith('.py') || scriptPath.endsWith('.rb'));
+    if (isScriptFile) {
+      return { trace: true, trajectory: true };
+    }
+  }
+
+  return { trace: false, trajectory: false };
+}
+
+function mergeTraceArtifactNeeds(assertions: Assertion[]): TraceArtifactNeeds {
+  return assertions.reduce<TraceArtifactNeeds>(
+    (needs, assertion) => {
+      const nextNeeds = getAssertionTraceArtifactNeeds(assertion);
+      return {
+        trace: needs.trace || nextNeeds.trace,
+        trajectory: needs.trajectory || nextNeeds.trajectory,
+      };
+    },
+    { trace: false, trajectory: false },
+  );
+}
+
+function createSharedTraceArtifacts(
+  traceId: string | undefined,
+  needs: TraceArtifactNeeds,
+): SharedTraceArtifacts {
+  let tracePromise: Promise<TraceData | undefined> | undefined;
+  let trajectoryPromise: Promise<TraceTrajectory | undefined> | undefined;
+
+  const resolveTrace = async (): Promise<TraceData | undefined> => {
+    if (!traceId || !needs.trace) {
+      return undefined;
+    }
+
+    if (!tracePromise) {
+      tracePromise = (async () => {
+        try {
+          const traceStore = getTraceStore();
+          const traceData = await traceStore.getTrace(traceId);
+          return traceData ? normalizeTraceData(traceData as TraceData) : undefined;
+        } catch (error) {
+          logger.debug(`Failed to fetch trace data for assertion row: ${error}`);
+          return undefined;
+        }
+      })();
+    }
+
+    return tracePromise;
+  };
+
+  const resolveTrajectory = async (): Promise<TraceTrajectory | undefined> => {
+    if (!needs.trajectory) {
+      return undefined;
+    }
+
+    if (!trajectoryPromise) {
+      trajectoryPromise = (async () => {
+        const trace = await resolveTrace();
+        return trace ? createTraceTrajectory(trace) : undefined;
+      })();
+    }
+
+    return trajectoryPromise;
+  };
+
+  return {
+    async attachToContext(context) {
+      const [trace, trajectory] = await Promise.all([resolveTrace(), resolveTrajectory()]);
+      if (trace) {
+        context.trace = trace;
+      }
+      if (trajectory) {
+        context.trajectory = trajectory;
+      }
+    },
+  };
+}
+
 export async function runAssertion({
   prompt,
   provider,
@@ -269,6 +404,7 @@ export async function runAssertion({
   latencyMs,
   providerResponse,
   traceId,
+  sharedTraceArtifacts,
 }: {
   prompt?: string;
   provider?: ApiProvider;
@@ -279,6 +415,7 @@ export async function runAssertion({
   latencyMs?: number;
   assertIndex?: number;
   traceId?: string;
+  sharedTraceArtifacts?: SharedTraceArtifacts;
 }): Promise<GradingResult> {
   // Use resolved vars if provided, otherwise fall back to test.vars
   const resolvedVars = vars || test.vars || {};
@@ -306,24 +443,10 @@ export async function runAssertion({
     ...(assertion.config ? { config: structuredClone(assertion.config) } : {}),
   };
 
-  // Add trace data if traceId is available
-  if (traceId) {
-    try {
-      const traceStore = getTraceStore();
-      const traceData = await traceStore.getTrace(traceId);
-      if (traceData) {
-        context.trace = {
-          traceId: traceData.traceId,
-          evaluationId: traceData.evaluationId,
-          testCaseId: traceData.testCaseId,
-          metadata: traceData.metadata,
-          spans: traceData.spans || [],
-        };
-      }
-    } catch (error) {
-      logger.debug(`Failed to fetch trace data for assertion: ${error}`);
-    }
-  }
+  const traceArtifacts =
+    sharedTraceArtifacts ||
+    createSharedTraceArtifacts(traceId, getAssertionTraceArtifactNeeds(assertion));
+  await traceArtifacts.attachToContext(context);
 
   // Render assertion values
   type ValueFromScriptType = string | boolean | number | GradingResult | object | undefined;
@@ -415,10 +538,9 @@ export async function runAssertion({
   // Centralized script output resolution
   // Script assertion types (javascript, python, ruby) interpret renderedValue as code to execute
   // All other types should use the script output as the comparison value
-  const SCRIPT_RESULT_ASSERTIONS = new Set(['javascript', 'python', 'ruby']);
   const baseType = getAssertionBaseType(assertion);
 
-  if (valueFromScript !== undefined && !SCRIPT_RESULT_ASSERTIONS.has(baseType)) {
+  if (valueFromScript !== undefined && !CUSTOM_SCRIPT_ASSERTION_TYPES.has(baseType)) {
     // Validate the script result type - only javascript/python/ruby can return functions
     if (typeof valueFromScript === 'function') {
       throw new Error(
@@ -578,6 +700,10 @@ export async function runAssertions({
       return { assertion, assertResult: mainAssertResult, index: i };
     })
     .flat();
+  const sharedTraceArtifacts = createSharedTraceArtifacts(
+    traceId,
+    mergeTraceArtifactNeeds(asserts.map(({ assertion }) => assertion)),
+  );
 
   await async.forEachOfLimit(
     asserts,
@@ -598,6 +724,7 @@ export async function runAssertions({
         latencyMs,
         assertIndex: index,
         traceId,
+        sharedTraceArtifacts,
       });
 
       assertResult.addResult({

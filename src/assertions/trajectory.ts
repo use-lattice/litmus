@@ -1,6 +1,5 @@
 import { matchesTrajectoryGoalSuccess } from '../matchers';
 import {
-  extractTrajectorySteps,
   formatTrajectoryStep,
   matchesTrajectoryStep,
   normalizeTrajectoryMatcher,
@@ -24,12 +23,12 @@ interface TrajectoryGoalSuccessValue {
   goal: string;
 }
 
-function getTraceOrThrow(params: AssertionParams) {
-  const trace = params.assertionValueContext.trace;
-  if (!trace || !trace.spans) {
+function getTrajectoryOrThrow(params: AssertionParams) {
+  const trajectory = params.assertionValueContext.trajectory;
+  if (!trajectory) {
     throw new Error(`No trace data available for ${params.baseType} assertion`);
   }
-  return trace;
+  return trajectory;
 }
 
 function applyInverse(pass: boolean, inverse: boolean) {
@@ -120,8 +119,8 @@ function resolveToolMatchers(
 }
 
 export const handleTrajectoryToolUsed = (params: AssertionParams): GradingResult => {
-  const trace = getTraceOrThrow(params);
-  const steps = extractTrajectorySteps(trace).filter((step) => step.type === 'tool');
+  const trajectory = getTrajectoryOrThrow(params);
+  const steps = trajectory.steps.filter((step) => step.type === 'tool');
   const expected = resolveToolMatchers(params.renderedValue ?? params.assertion.value);
 
   if (expected.kind === 'list') {
@@ -224,8 +223,8 @@ function resolveSequenceValue(value: unknown): TrajectorySequenceValue {
 }
 
 export const handleTrajectoryToolSequence = (params: AssertionParams): GradingResult => {
-  const trace = getTraceOrThrow(params);
-  const toolSteps = extractTrajectorySteps(trace).filter((step) => step.type === 'tool');
+  const trajectory = getTrajectoryOrThrow(params);
+  const toolSteps = trajectory.steps.filter((step) => step.type === 'tool');
   const value = resolveSequenceValue(params.renderedValue ?? params.assertion.value);
   const expectedMatchers = value.steps.map((step, index) => {
     const matcher = normalizeTrajectoryMatcher(step, 'tool');
@@ -314,8 +313,8 @@ function resolveStepCountValue(value: unknown): TrajectoryCountValue {
 }
 
 export const handleTrajectoryStepCount = (params: AssertionParams): GradingResult => {
-  const trace = getTraceOrThrow(params);
-  const steps = extractTrajectorySteps(trace);
+  const trajectory = getTrajectoryOrThrow(params);
+  const { steps } = trajectory;
   const matcher = resolveStepCountValue(params.renderedValue ?? params.assertion.value);
 
   const { min, max } = matcher;
@@ -372,12 +371,12 @@ export const handleTrajectoryStepCount = (params: AssertionParams): GradingResul
 export const handleTrajectoryGoalSuccess = async (
   params: AssertionParams,
 ): Promise<GradingResult> => {
-  const trace = getTraceOrThrow(params);
+  const trajectory = getTrajectoryOrThrow(params);
   const { goal } = resolveGoalSuccessValue(params.renderedValue ?? params.assertion.value);
-  const trajectory = summarizeTrajectoryForJudge(trace);
+  const trajectorySummary = summarizeTrajectoryForJudge(trajectory);
   const result = await matchesTrajectoryGoalSuccess(
     goal,
-    trajectory,
+    trajectorySummary,
     params.outputString,
     params.test.options,
     params.test.vars,

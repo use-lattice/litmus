@@ -5,6 +5,7 @@ import {
   handleTrajectoryToolUsed,
 } from '../../src/assertions/trajectory';
 import {
+  createTraceTrajectory,
   extractTrajectorySteps,
   summarizeTrajectoryForJudge,
 } from '../../src/assertions/trajectoryUtils';
@@ -82,6 +83,7 @@ const mockTraceData: TraceData = {
     },
   ],
 };
+const mockTrajectory = createTraceTrajectory(mockTraceData);
 
 const defaultParams = {
   assertionValueContext: {
@@ -92,6 +94,7 @@ const defaultParams = {
     provider: mockProvider,
     providerResponse: { output: 'test output' },
     trace: mockTraceData,
+    trajectory: mockTrajectory,
   },
   output: 'test output',
   outputString: 'test output',
@@ -115,6 +118,34 @@ describe('trajectory utilities', () => {
 
     expect(steps[4].aliases).toContain('ls');
     expect(steps[2].aliases).toContain('mcp inventory/search_inventory');
+  });
+
+  it('uses spanId as a final tie-breaker for otherwise equal spans', () => {
+    const steps = extractTrajectorySteps({
+      ...mockTraceData,
+      spans: [
+        {
+          spanId: 'span-b',
+          name: 'tool.call',
+          startTime: 1000,
+          endTime: 1100,
+          attributes: {
+            'tool.name': 'lookup_order',
+          },
+        },
+        {
+          spanId: 'span-a',
+          name: 'tool.call',
+          startTime: 1000,
+          endTime: 1100,
+          attributes: {
+            'tool.name': 'lookup_order',
+          },
+        },
+      ],
+    });
+
+    expect(steps.map((step) => step.spanId)).toEqual(['span-a', 'span-b']);
   });
 
   it('only treats a generic query attribute as search when the span looks search-like', () => {
@@ -173,7 +204,7 @@ describe('trajectory utilities', () => {
       ],
     } satisfies TraceData;
 
-    const summary = JSON.parse(summarizeTrajectoryForJudge(trace)) as {
+    const summary = JSON.parse(summarizeTrajectoryForJudge(createTraceTrajectory(trace))) as {
       compactedStepCount: number;
       stepCount: number;
       steps: Array<

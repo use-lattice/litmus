@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { handleTrajectoryGoalSuccess } from '../../src/assertions/trajectory';
+import { createTraceTrajectory } from '../../src/assertions/trajectoryUtils';
 import { matchesTrajectoryGoalSuccess } from '../../src/matchers';
 
 import type {
@@ -54,6 +55,7 @@ const mockTraceData: TraceData = {
     },
   ],
 };
+const mockTrajectory = createTraceTrajectory(mockTraceData);
 
 const defaultParams: AssertionParams = {
   assertion: {
@@ -69,6 +71,7 @@ const defaultParams: AssertionParams = {
     provider: mockProvider,
     providerResponse: { output: 'test output' },
     trace: mockTraceData,
+    trajectory: mockTrajectory,
   },
   output: 'test output',
   outputString: 'test output',

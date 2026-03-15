@@ -1,27 +1,21 @@
 import { matchesPattern } from './traceUtils';
 
-import type { TraceData, TraceSpan } from '../types/tracing';
+import type {
+  TraceData,
+  TraceSpan,
+  TraceTrajectory,
+  TrajectoryStep,
+  TrajectoryStepType,
+} from '../types/tracing';
 
-export type TrajectoryStepType = 'command' | 'message' | 'reasoning' | 'search' | 'span' | 'tool';
+export type { TraceTrajectory, TrajectoryStep, TrajectoryStepType } from '../types/tracing';
+
 type TrajectoryAttributes = Record<string, unknown>;
 
 export interface TrajectoryStepMatcher {
   name?: string;
   pattern?: string;
   type?: TrajectoryStepType | TrajectoryStepType[];
-}
-
-export interface TrajectoryStep {
-  aliases: string[];
-  attributes: TrajectoryAttributes;
-  endTime?: number;
-  name: string;
-  spanId: string;
-  spanName: string;
-  startTime: number;
-  statusCode?: number;
-  statusMessage?: string;
-  type: TrajectoryStepType;
 }
 
 const TOOL_ATTRIBUTE_KEYS = [
@@ -224,7 +218,12 @@ export function extractTrajectorySteps(trace: TraceData): TrajectoryStep[] {
         return endDiff;
       }
 
-      return a.name.localeCompare(b.name);
+      const nameDiff = a.name.localeCompare(b.name);
+      if (nameDiff !== 0) {
+        return nameDiff;
+      }
+
+      return a.spanId.localeCompare(b.spanId);
     })
     .map((span) => {
       const toolName = extractToolName(span);
@@ -266,6 +265,7 @@ export function extractTrajectorySteps(trace: TraceData): TrajectoryStep[] {
         attributes: span.attributes || {},
         endTime: span.endTime,
         name,
+        parentSpanId: span.parentSpanId,
         spanId: span.spanId,
         spanName: span.name,
         startTime: span.startTime,
@@ -274,6 +274,14 @@ export function extractTrajectorySteps(trace: TraceData): TrajectoryStep[] {
         type,
       };
     });
+}
+
+export function createTraceTrajectory(trace: TraceData): TraceTrajectory {
+  return {
+    traceId: trace.traceId,
+    normalizerVersion: 1,
+    steps: extractTrajectorySteps(trace),
+  };
 }
 
 export function normalizeTrajectoryMatcher(
@@ -356,8 +364,39 @@ function truncateJudgeTrajectorySteps(
   ];
 }
 
-export function summarizeTrajectoryForJudge(trace: TraceData): string {
-  const rawSteps = extractTrajectorySteps(trace).map((step, index) => ({
+function resolveTrajectorySummaryInput(
+  input: TraceData | TraceTrajectory | TrajectoryStep[],
+  traceId?: string,
+): TraceTrajectory {
+  if (Array.isArray(input)) {
+    return {
+      traceId: traceId || 'unknown',
+      normalizerVersion: 1,
+      steps: input,
+    };
+  }
+
+  if ('spans' in input) {
+    return createTraceTrajectory(input);
+  }
+
+  if ('steps' in input) {
+    return input;
+  }
+
+  return {
+    traceId: traceId || 'unknown',
+    normalizerVersion: 1,
+    steps: [],
+  };
+}
+
+export function summarizeTrajectoryForJudge(
+  input: TraceData | TraceTrajectory | TrajectoryStep[],
+  traceId?: string,
+): string {
+  const trajectory = resolveTrajectorySummaryInput(input, traceId);
+  const rawSteps = trajectory.steps.map((step, index) => ({
     index: index + 1,
     type: step.type,
     name: step.name,
@@ -369,7 +408,7 @@ export function summarizeTrajectoryForJudge(trace: TraceData): string {
 
   return JSON.stringify(
     {
-      traceId: trace.traceId,
+      traceId: trajectory.traceId,
       stepCount: rawSteps.length,
       compactedStepCount: compactedSteps.length,
       steps,

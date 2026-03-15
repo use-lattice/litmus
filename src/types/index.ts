@@ -31,7 +31,7 @@ import type { NunjucksFilterMap, TokenUsage, VarValue } from './shared';
 
 export type { VarValue } from './shared';
 
-import type { TraceData } from './tracing';
+import type { TraceData, TraceTrajectory } from './tracing';
 
 /**
  * Minimal interface for RateLimitRegistry to avoid circular dependency.
@@ -673,6 +673,7 @@ export interface AssertionValueFunctionContext {
   provider: ApiProvider | undefined;
   providerResponse: ProviderResponse | undefined;
   trace?: TraceData;
+  trajectory?: TraceTrajectory;
 }
 
 export type AssertionValueFunction = (
