@@ -6,8 +6,9 @@ import path from 'path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-import react from '@vitejs/plugin-react';
-import { defineConfig, type Plugin } from 'vitest/config';
+import babel from '@rolldown/plugin-babel';
+import react, { reactCompilerPreset } from '@vitejs/plugin-react';
+import { defineConfig } from 'vitest/config';
 import packageJson from '../../package.json' with { type: 'json' };
 
 /**
@@ -15,7 +16,7 @@ import packageJson from '../../package.json' with { type: 'json' };
  * This allows us to avoid bundling heavy Node polyfills by providing
  * lightweight browser implementations.
  */
-function browserModulesPlugin(): Plugin {
+function browserModulesPlugin() {
   // Map of Node module paths to their browser replacements
   const replacements: Array<{ nodePath: string; browserPath: string; patterns: string[] }> = [
     {
@@ -35,7 +36,7 @@ function browserModulesPlugin(): Plugin {
   return {
     name: 'browser-modules',
     enforce: 'pre',
-    resolveId(source, importer) {
+    resolveId(source: string, importer: string | undefined) {
       if (!importer) {
         return null;
       }
@@ -89,14 +90,8 @@ export default defineConfig({
     port: 3000,
   },
   base: process.env.VITE_PUBLIC_BASENAME || '/',
-  plugins: [
-    browserModulesPlugin(),
-    react({
-      babel: {
-        plugins: [['babel-plugin-react-compiler', {}]],
-      },
-    }),
-  ],
+  // biome-ignore lint/suspicious/noExplicitAny: Type mismatch between Vite 7 (vitest/config) and Vite 8 (@vitejs/plugin-react v6) plugin types
+  plugins: [browserModulesPlugin(), react(), babel({ presets: [reactCompilerPreset()] })] as any,
   resolve: {
     alias: {
       '@app': path.resolve(__dirname, './src'),
@@ -114,12 +109,29 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Manual chunking to split vendor libraries
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-charts': ['recharts', 'chart.js'],
-          'vendor-utils': ['js-yaml', 'diff'],
-          'vendor-syntax': ['prismjs'],
-          'vendor-markdown': ['react-markdown', 'remark-gfm'],
+        // Vite 8 uses rolldown which requires manualChunks to be a function
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (
+              id.includes('react') ||
+              id.includes('react-dom') ||
+              id.includes('react-router-dom')
+            ) {
+              return 'vendor-react';
+            }
+            if (id.includes('recharts') || id.includes('chart.js')) {
+              return 'vendor-charts';
+            }
+            if (id.includes('js-yaml') || id.includes('/diff/')) {
+              return 'vendor-utils';
+            }
+            if (id.includes('prismjs')) {
+              return 'vendor-syntax';
+            }
+            if (id.includes('react-markdown') || id.includes('remark-gfm')) {
+              return 'vendor-markdown';
+            }
+          }
         },
       },
     },
