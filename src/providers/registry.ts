@@ -892,8 +892,17 @@ export const providerMap: ProviderFactory[] = [
       // Codex SDK providers (openai:codex-sdk or openai:codex)
       if (modelType === 'codex-sdk' || modelType === 'codex') {
         const { OpenAICodexSDKProvider } = await import('./openai/codex-sdk');
+        const codexModel = modelName || configuredModel;
+        const codexProviderId = providerOptions.id ?? providerPath;
         return new OpenAICodexSDKProvider({
           ...providerOptions,
+          id: codexProviderId,
+          config: codexModel
+            ? {
+                ...providerOptions.config,
+                model: codexModel,
+              }
+            : providerOptions.config,
           env: context.env,
         });
       }
