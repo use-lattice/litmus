@@ -111,3 +111,6 @@ Build a local, eval-focused voice simulation harness in promptfoo that is inspir
 - Docs build: `cd site && SKIP_OG_GENERATION=true npm run build` passed.
 - Live eval with `PROMPTFOO_DISABLE_REMOTE_GENERATION=true` and plain `promptfoo:simulated-user` passed on the first integration-tau test, proving the normal registry-loaded path stayed local.
 - A no-key smoke with an `echo` target failed in `SimulatedUser.sendMessageToLocalUser` with the local OpenAI API key error, which confirms the omitted-`userProvider` path no longer falls back to the hosted simulator.
+- Removed hidden `_resolved*` config transport from regular `SimulatedUser` and `TauVoiceProvider` in favor of explicit constructor wiring for resolved nested providers.
+- Narrowed nested provider config types back to serializable references (`string | ProviderOptions`) and kept live `ApiProvider` instances as internal constructor-only inputs.
+- Re-ran focused registry, simulated-user, and tau-voice Vitest coverage, plus live local smokes for plain simulated-user and Tau Voice after the interface cleanup.

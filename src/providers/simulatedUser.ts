@@ -25,8 +25,9 @@ import type {
 export type Message = TauMessage;
 
 type AgentProviderOptions = ProviderOptions & {
+  resolvedUserProvider?: ApiProvider;
   config?: {
-    userProvider?: string | ProviderOptions | ApiProvider;
+    userProvider?: string | ProviderOptions;
     instructions?: string;
     maxTurns?: number;
     stateful?: boolean;
@@ -36,7 +37,6 @@ type AgentProviderOptions = ProviderOptions & {
      * Useful for testing specific conversation states or reproducing bugs.
      */
     initialMessages?: Message[] | string;
-    _resolvedUserProvider?: ApiProvider;
   };
 };
 
@@ -58,13 +58,13 @@ export class SimulatedUser implements ApiProvider {
    */
   readonly taskId: string = 'tau';
 
-  constructor({ id, label, config }: AgentProviderOptions) {
+  constructor({ id, label, config = {}, resolvedUserProvider }: AgentProviderOptions) {
     this.identifier = id ?? label ?? 'agent-provider';
     this.maxTurns = config.maxTurns ?? 10;
     this.rawInstructions = config.instructions || '{{instructions}}';
     this.stateful = config.stateful ?? false;
     this.configInitialMessages = config.initialMessages;
-    this.resolvedUserProvider = config._resolvedUserProvider;
+    this.resolvedUserProvider = resolvedUserProvider;
   }
 
   id() {

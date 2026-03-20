@@ -275,10 +275,10 @@ describe('SimulatedUser', () => {
 
       const localSimulatedUser = new SimulatedUser({
         id: 'local-agent',
+        resolvedUserProvider: localUserProvider,
         config: {
           instructions: 'test instructions',
           maxTurns: 1,
-          _resolvedUserProvider: localUserProvider,
         },
       });
 

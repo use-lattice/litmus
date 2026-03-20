@@ -89,11 +89,11 @@ describe('TauVoiceProvider', () => {
 
   it('should run a Tau-style voice loop and collect metadata', async () => {
     const provider = new TauVoiceProvider({
+      resolvedUserProvider: userProvider,
+      resolvedTtsProvider: ttsProvider,
       config: {
         instructions: '{{instructions}}',
         maxTurns: 4,
-        _resolvedUserProvider: userProvider,
-        _resolvedTtsProvider: ttsProvider,
       },
     });
 
@@ -200,10 +200,10 @@ describe('TauVoiceProvider', () => {
     originalProvider.config.instructions = 'Follow airline policy.';
 
     const provider = new TauVoiceProvider({
+      resolvedUserProvider: userProvider,
+      resolvedTtsProvider: ttsProvider,
       config: {
         maxTurns: 5,
-        _resolvedUserProvider: userProvider,
-        _resolvedTtsProvider: ttsProvider,
       },
     });
 
@@ -248,6 +248,8 @@ describe('TauVoiceProvider', () => {
     };
 
     const provider = new TauVoiceProvider({
+      resolvedUserProvider: userProvider,
+      resolvedTtsProvider: ttsProvider,
       config: {
         maxTurns: 2,
         initialMessages: [
@@ -256,8 +258,6 @@ describe('TauVoiceProvider', () => {
             content: 'Welcome to Promptfoo Air. What trip can I help with today?',
           },
         ],
-        _resolvedUserProvider: userProvider,
-        _resolvedTtsProvider: ttsProvider,
       },
     });
 
@@ -291,6 +291,8 @@ describe('TauVoiceProvider', () => {
 
   it('should support stringified JSON initialMessages and per-test overrides', async () => {
     const provider = new TauVoiceProvider({
+      resolvedUserProvider: userProvider,
+      resolvedTtsProvider: ttsProvider,
       config: {
         maxTurns: 2,
         initialMessages: JSON.stringify([
@@ -299,8 +301,6 @@ describe('TauVoiceProvider', () => {
             content: 'Config greeting should be overridden.',
           },
         ]),
-        _resolvedUserProvider: userProvider,
-        _resolvedTtsProvider: ttsProvider,
       },
     });
 
@@ -341,11 +341,11 @@ describe('TauVoiceProvider', () => {
 
   it('should ignore malformed or invalid initialMessages instead of crashing', async () => {
     const provider = new TauVoiceProvider({
+      resolvedUserProvider: userProvider,
+      resolvedTtsProvider: ttsProvider,
       config: {
         maxTurns: 2,
         initialMessages: '[{"role":"assistant","content":"unterminated"',
-        _resolvedUserProvider: userProvider,
-        _resolvedTtsProvider: ttsProvider,
       },
     });
 
@@ -499,12 +499,12 @@ describe('TauVoiceProvider', () => {
     };
 
     const provider = new TauVoiceProvider({
+      resolvedUserProvider: userProvider,
+      resolvedTtsProvider: ttsProvider,
+      resolvedTranscriptionProvider: transcriptionProvider,
       config: {
         maxTurns: 4,
         transcriptionScope: 'assistant-turns-and-conversation',
-        _resolvedUserProvider: userProvider,
-        _resolvedTtsProvider: ttsProvider,
-        _resolvedTranscriptionProvider: transcriptionProvider,
       },
     });
 

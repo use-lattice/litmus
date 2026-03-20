@@ -81,9 +81,9 @@ export interface TauVoiceTurn {
 }
 
 type TauVoiceConfig = {
-  userProvider?: string | ProviderOptions | ApiProvider;
-  ttsProvider?: string | ProviderOptions | ApiProvider;
-  transcriptionProvider?: string | ProviderOptions | ApiProvider;
+  userProvider?: string | ProviderOptions;
+  ttsProvider?: string | ProviderOptions;
+  transcriptionProvider?: string | ProviderOptions;
   transcriptionScope?: 'assistant-turns' | 'conversation' | 'assistant-turns-and-conversation';
   transcriptionSilenceMs?: number;
   instructions?: string;
@@ -91,12 +91,12 @@ type TauVoiceConfig = {
   initialMessages?: TauMessage[] | string;
   voice?: OpenAiSpeechProvider['config']['voice'];
   ttsFormat?: 'wav' | 'pcm' | 'mp3' | 'opus' | 'aac' | 'flac';
-  _resolvedUserProvider?: ApiProvider;
-  _resolvedTtsProvider?: ApiProvider;
-  _resolvedTranscriptionProvider?: ApiProvider;
 };
 
 type TauVoiceProviderOptions = ProviderOptions & {
+  resolvedUserProvider?: ApiProvider;
+  resolvedTtsProvider?: ApiProvider;
+  resolvedTranscriptionProvider?: ApiProvider;
   config?: TauVoiceConfig;
 };
 
@@ -113,13 +113,20 @@ export class TauVoiceProvider implements ApiProvider {
   private readonly defaultVoice?: TauVoiceConfig['voice'];
   private readonly defaultTtsFormat?: TauVoiceConfig['ttsFormat'];
 
-  constructor({ id, label, config = {} }: TauVoiceProviderOptions) {
+  constructor({
+    id,
+    label,
+    config = {},
+    resolvedUserProvider,
+    resolvedTtsProvider,
+    resolvedTranscriptionProvider,
+  }: TauVoiceProviderOptions) {
     this.identifier = id ?? label ?? 'promptfoo:tau-voice';
     this.maxTurns = config.maxTurns ?? 10;
     this.rawInstructions = config.instructions || '{{instructions}}';
-    this.resolvedUserProvider = config._resolvedUserProvider;
-    this.resolvedTtsProvider = config._resolvedTtsProvider;
-    this.resolvedTranscriptionProvider = config._resolvedTranscriptionProvider;
+    this.resolvedUserProvider = resolvedUserProvider;
+    this.resolvedTtsProvider = resolvedTtsProvider;
+    this.resolvedTranscriptionProvider = resolvedTranscriptionProvider;
     this.transcriptionScope = config.transcriptionScope || 'assistant-turns';
     this.transcriptionSilenceMs = config.transcriptionSilenceMs ?? 250;
     this.configInitialMessages = config.initialMessages;

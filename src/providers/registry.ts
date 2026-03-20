@@ -1662,9 +1662,9 @@ export const providerMap: ProviderFactory[] = [
 
       return new SimulatedUser({
         ...providerOptions,
+        resolvedUserProvider,
         config: {
           ...providerOptions.config,
-          _resolvedUserProvider: resolvedUserProvider,
         },
       });
     },
@@ -1694,11 +1694,11 @@ export const providerMap: ProviderFactory[] = [
 
       return new TauVoiceProvider({
         ...providerOptions,
+        resolvedUserProvider,
+        resolvedTtsProvider,
+        resolvedTranscriptionProvider,
         config: {
           ...providerOptions.config,
-          _resolvedUserProvider: resolvedUserProvider,
-          _resolvedTtsProvider: resolvedTtsProvider,
-          _resolvedTranscriptionProvider: resolvedTranscriptionProvider,
         },
       });
     },

@@ -214,6 +214,27 @@ describe('Provider Registry', () => {
       expect((provider as any).resolvedUserProvider?.id()).toBe('echo');
     });
 
+    it('should wire resolved nested providers into Tau Voice without hidden config fields', async () => {
+      const factory = providerMap.find((f) => f.test('promptfoo:tau-voice'));
+      expect(factory).toBeDefined();
+
+      const provider = await factory!.create(
+        'promptfoo:tau-voice',
+        {
+          config: {
+            userProvider: 'echo',
+            ttsProvider: 'echo',
+            transcriptionProvider: 'echo',
+          },
+        },
+        mockContext,
+      );
+
+      expect((provider as any).resolvedUserProvider?.id()).toBe('echo');
+      expect((provider as any).resolvedTtsProvider?.id()).toBe('echo');
+      expect((provider as any).resolvedTranscriptionProvider?.id()).toBe('echo');
+    });
+
     it('should handle redteam providers correctly', async () => {
       const redteamPaths = [
         'promptfoo:redteam:best-of-n',
