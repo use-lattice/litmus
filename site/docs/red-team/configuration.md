@@ -71,7 +71,7 @@ redteam:
 | `testGenerationInstructions` | `string`                  | Additional instructions for test generation to guide attack creation                                    | Empty                                            |
 | `graderExamples`             | `Array<object>`           | Global grading examples applied to all plugins; merged before plugin-level `config.graderExamples`      | None                                             |
 
-For multi-input testing, define `inputs` on the target/provider rather than under `redteam`. See [Multi-Input Red Teaming](/docs/red-team/multi-input/) for end-to-end examples.
+For multi-input testing, define `inputs` on the target/provider rather than under `redteam`. Promptfoo automatically stores the combined payload in `__prompt` for internal use, so you should not set `injectVar` or create a manual `prompt` field just to support multi-input configs. See [Multi-Input Red Teaming](/docs/red-team/multi-input/) for end-to-end examples.
 
 ### Framework Filtering
 
