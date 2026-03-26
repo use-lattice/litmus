@@ -708,6 +708,7 @@ These properties can be set under the provider `config` key:
 | top_p                 | Controls nucleus sampling (0-1)                                                                                             |
 | frequency_penalty     | Penalizes repeated tokens (-2 to 2)                                                                                         |
 | presence_penalty      | Penalizes new tokens based on presence (-2 to 2)                                                                            |
+| omitDefaults          | Omits hardcoded defaults unless values are explicitly set via config or environment variables                               |
 | best_of               | Generates multiple outputs and returns the best                                                                             |
 | functions             | Array of functions available for the model to call                                                                          |
 | function_call         | Controls how the model calls functions                                                                                      |

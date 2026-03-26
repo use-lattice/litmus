@@ -14,10 +14,14 @@ const mockMaybeLoadResponseFormatFromExternalFile =
     typeof maybeLoadResponseFormatFromExternalFile
   >;
 let authHeadersValue: Record<string, string>;
+const originalOpenAiTemperature = process.env.OPENAI_TEMPERATURE;
+const originalOpenAiMaxTokens = process.env.OPENAI_MAX_TOKENS;
 
 describe('AzureResponsesProvider', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    delete process.env.OPENAI_TEMPERATURE;
+    delete process.env.OPENAI_MAX_TOKENS;
 
     // Mock environment variables
     process.env.AZURE_API_KEY = 'test-key';
@@ -28,6 +32,16 @@ describe('AzureResponsesProvider', () => {
   afterEach(() => {
     delete process.env.AZURE_API_KEY;
     delete process.env.AZURE_API_HOST;
+    if (originalOpenAiTemperature === undefined) {
+      delete process.env.OPENAI_TEMPERATURE;
+    } else {
+      process.env.OPENAI_TEMPERATURE = originalOpenAiTemperature;
+    }
+    if (originalOpenAiMaxTokens === undefined) {
+      delete process.env.OPENAI_MAX_TOKENS;
+    } else {
+      process.env.OPENAI_MAX_TOKENS = originalOpenAiMaxTokens;
+    }
     delete (AzureResponsesProvider.prototype as any).authHeaders;
   });
 
@@ -208,6 +222,35 @@ describe('AzureResponsesProvider', () => {
       // temperature: 0 should be present in the request body
       expect(body.temperature).toBe(0);
       expect('temperature' in body).toBe(true);
+    });
+
+    it('should omit default temperature and max_output_tokens when omitDefaults is true', async () => {
+      const provider = new AzureResponsesProvider('gpt-4.1-test', {
+        config: { omitDefaults: true },
+      });
+
+      const body = await provider.getAzureResponsesBody('Hello world');
+
+      expect(body.temperature).toBeUndefined();
+      expect('temperature' in body).toBe(false);
+      expect(body.max_output_tokens).toBeUndefined();
+      expect('max_output_tokens' in body).toBe(false);
+    });
+
+    it('should use env defaults with omitDefaults when OPENAI env vars are set', async () => {
+      process.env.OPENAI_TEMPERATURE = '0.5';
+      process.env.OPENAI_MAX_TOKENS = '2048';
+
+      const provider = new AzureResponsesProvider('gpt-4.1-test', {
+        config: { omitDefaults: true },
+      });
+
+      const body = await provider.getAzureResponsesBody('Hello world');
+
+      expect(body.temperature).toBe(0.5);
+      expect('temperature' in body).toBe(true);
+      expect(body.max_output_tokens).toBe(2048);
+      expect('max_output_tokens' in body).toBe(true);
     });
 
     it('should correctly send max_output_tokens: 0 in the request body when explicitly set', async () => {

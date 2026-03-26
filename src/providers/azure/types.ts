@@ -101,6 +101,12 @@ export interface AzureCompletionOptions {
 
   passthrough?: object;
   mcp?: MCPConfig;
+
+  /**
+   * When true, omit hardcoded defaults for temperature, max_tokens, top_p, etc.
+   * Only values explicitly set via config or environment variables will be sent.
+   */
+  omitDefaults?: boolean;
 }
 
 export interface AzureModelCost {
