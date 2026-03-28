@@ -2,7 +2,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 
 import type { MCPConfig } from '../mcp/types';
 
-// Web fetch tool configuration
+// Web fetch tool configuration (legacy version)
 export interface WebFetchToolConfig {
   type: 'web_fetch_20250910';
   name: 'web_fetch';
@@ -16,6 +16,21 @@ export interface WebFetchToolConfig {
   cache_control?: Anthropic.Beta.Messages.BetaCacheControlEphemeral;
 }
 
+// Web fetch tool configuration (latest version with use_cache support)
+export interface WebFetchToolConfigV2 {
+  type: 'web_fetch_20260309';
+  name: 'web_fetch';
+  max_uses?: number;
+  allowed_domains?: string[];
+  blocked_domains?: string[];
+  citations?: {
+    enabled: boolean;
+  };
+  max_content_tokens?: number;
+  cache_control?: Anthropic.Beta.Messages.BetaCacheControlEphemeral;
+  use_cache?: boolean;
+}
+
 // Web search tool configuration (for reference)
 export interface WebSearchToolConfig {
   type: 'web_search_20250305';
@@ -24,7 +39,7 @@ export interface WebSearchToolConfig {
   cache_control?: Anthropic.Beta.Messages.BetaCacheControlEphemeral;
 }
 
-export type AnthropicToolConfig = WebFetchToolConfig | WebSearchToolConfig;
+export type AnthropicToolConfig = WebFetchToolConfig | WebFetchToolConfigV2 | WebSearchToolConfig;
 
 // Structured outputs configuration (JSON schema)
 export interface OutputFormat {
@@ -41,12 +56,15 @@ export interface OutputFormat {
 export interface AnthropicMessageOptions {
   apiBaseUrl?: string;
   apiKey?: string;
+  cache_control?: Anthropic.Messages.CacheControlEphemeral | null; // Top-level cache control - auto-applies to last cacheable block
   cost?: number;
   effort?: 'low' | 'medium' | 'high' | 'max'; // Controls output quality/speed tradeoff
   extra_body?: Record<string, any>;
   headers?: Record<string, string>;
   max_tokens?: number;
+  metadata?: { user_id?: string }; // Request metadata for tracking/abuse detection
   model?: string;
+  stop_sequences?: string[]; // Custom stop sequences
   stream?: boolean; // Enable streaming for long-running operations like extended thinking
   temperature?: number;
   thinking?: Anthropic.Messages.ThinkingConfigParam;

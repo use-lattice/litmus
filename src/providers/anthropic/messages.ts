@@ -205,6 +205,11 @@ export class AnthropicMessagesProvider extends AnthropicGenericProvider {
           : (config.temperature ??
             parseEnvFloat(this.env?.ANTHROPIC_TEMPERATURE) ??
             getEnvFloat('ANTHROPIC_TEMPERATURE', 0)),
+      ...(config.top_p == null ? {} : { top_p: config.top_p }),
+      ...(config.top_k == null ? {} : { top_k: config.top_k }),
+      ...(config.cache_control ? { cache_control: config.cache_control } : {}),
+      ...(config.stop_sequences?.length ? { stop_sequences: config.stop_sequences } : {}),
+      ...(config.metadata ? { metadata: config.metadata } : {}),
       ...(allTools.length > 0 ? { tools: allTools as any } : {}),
       ...(config.tool_choice
         ? {

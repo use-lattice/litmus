@@ -2,6 +2,7 @@ import dedent from 'dedent';
 import { describe, expect, it } from 'vitest';
 import {
   calculateAnthropicCost,
+  getTokenUsage,
   outputFromMessage,
   parseMessages,
   processAnthropicTools,
@@ -10,6 +11,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 
 import type {
   WebFetchToolConfig,
+  WebFetchToolConfigV2,
   WebSearchToolConfig,
 } from '../../../src/providers/anthropic/types';
 
@@ -1105,6 +1107,142 @@ describe('Anthropic utilities', () => {
       expect(requiredBetaFeatures).toContain('structured-outputs-2025-11-13');
       expect(requiredBetaFeatures).toContain('web-fetch-2025-09-10');
       expect(requiredBetaFeatures).toHaveLength(2);
+    });
+
+    it('should process web_fetch_20260309 tool with use_cache and add beta feature', () => {
+      const webFetchToolV2: WebFetchToolConfigV2 = {
+        type: 'web_fetch_20260309',
+        name: 'web_fetch',
+        max_uses: 3,
+        use_cache: false,
+        allowed_domains: ['example.com'],
+      };
+
+      const { processedTools, requiredBetaFeatures } = processAnthropicTools([webFetchToolV2]);
+
+      expect(processedTools).toHaveLength(1);
+      expect(processedTools[0]).toMatchObject({
+        type: 'web_fetch_20260309',
+        name: 'web_fetch',
+        max_uses: 3,
+        use_cache: false,
+        allowed_domains: ['example.com'],
+      });
+      expect(requiredBetaFeatures).toEqual(['web-fetch-2026-03-09']);
+    });
+
+    it('should process web_fetch_20260309 tool with all optional parameters', () => {
+      const webFetchToolV2: WebFetchToolConfigV2 = {
+        type: 'web_fetch_20260309',
+        name: 'web_fetch',
+        max_uses: 10,
+        allowed_domains: ['docs.example.com'],
+        blocked_domains: ['ads.example.com'],
+        citations: { enabled: true },
+        max_content_tokens: 50000,
+        cache_control: { type: 'ephemeral' },
+        use_cache: true,
+      };
+
+      const { processedTools } = processAnthropicTools([webFetchToolV2]);
+
+      expect(processedTools).toHaveLength(1);
+      expect(processedTools[0]).toMatchObject({
+        type: 'web_fetch_20260309',
+        name: 'web_fetch',
+        max_uses: 10,
+        allowed_domains: ['docs.example.com'],
+        blocked_domains: ['ads.example.com'],
+        citations: { enabled: true },
+        max_content_tokens: 50000,
+        cache_control: { type: 'ephemeral' },
+        use_cache: true,
+      });
+    });
+
+    it('should handle mix of v1 and v2 web fetch tools', () => {
+      const v1Tool: WebFetchToolConfig = {
+        type: 'web_fetch_20250910',
+        name: 'web_fetch',
+      };
+      const v2Tool: WebFetchToolConfigV2 = {
+        type: 'web_fetch_20260309',
+        name: 'web_fetch',
+        use_cache: false,
+      };
+
+      const { processedTools, requiredBetaFeatures } = processAnthropicTools([v1Tool, v2Tool]);
+
+      expect(processedTools).toHaveLength(2);
+      expect(requiredBetaFeatures).toContain('web-fetch-2025-09-10');
+      expect(requiredBetaFeatures).toContain('web-fetch-2026-03-09');
+    });
+  });
+
+  describe('getTokenUsage', () => {
+    it('should return basic token usage', () => {
+      const data = { usage: { input_tokens: 100, output_tokens: 50 } };
+      const result = getTokenUsage(data, false);
+      expect(result).toEqual({ total: 150, prompt: 100, completion: 50 });
+    });
+
+    it('should return cached token usage', () => {
+      const data = { usage: { input_tokens: 100, output_tokens: 50 } };
+      const result = getTokenUsage(data, true);
+      expect(result).toEqual({ cached: 150, total: 150 });
+    });
+
+    it('should return empty object when no usage data', () => {
+      const result = getTokenUsage({}, false);
+      expect(result).toEqual({});
+    });
+
+    it('should track cache_read_input_tokens in completionDetails', () => {
+      const data = {
+        usage: {
+          input_tokens: 100,
+          output_tokens: 50,
+          cache_read_input_tokens: 80,
+          cache_creation_input_tokens: 0,
+        },
+      };
+      const result = getTokenUsage(data, false);
+      expect(result).toEqual({
+        total: 150,
+        prompt: 100,
+        completion: 50,
+        completionDetails: {
+          cacheReadInputTokens: 80,
+          cacheCreationInputTokens: 0,
+        },
+      });
+    });
+
+    it('should track cache_creation_input_tokens in completionDetails', () => {
+      const data = {
+        usage: {
+          input_tokens: 100,
+          output_tokens: 50,
+          cache_read_input_tokens: 0,
+          cache_creation_input_tokens: 60,
+        },
+      };
+      const result = getTokenUsage(data, false);
+      expect(result).toEqual({
+        total: 150,
+        prompt: 100,
+        completion: 50,
+        completionDetails: {
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 60,
+        },
+      });
+    });
+
+    it('should not include completionDetails when no cache tokens', () => {
+      const data = { usage: { input_tokens: 100, output_tokens: 50 } };
+      const result = getTokenUsage(data, false);
+      expect(result.completionDetails).toBeUndefined();
     });
   });
 });

@@ -3,7 +3,12 @@ import { calculateCost as calculateCostBase } from '../shared';
 import type Anthropic from '@anthropic-ai/sdk';
 
 import type { TokenUsage } from '../../types/index';
-import type { AnthropicToolConfig, WebFetchToolConfig, WebSearchToolConfig } from './types';
+import type {
+  AnthropicToolConfig,
+  WebFetchToolConfig,
+  WebFetchToolConfigV2,
+  WebSearchToolConfig,
+} from './types';
 
 // Model definitions with cost information
 export const ANTHROPIC_MODELS = [
@@ -291,11 +296,21 @@ export function getTokenUsage(data: any, cached: boolean): Partial<TokenUsage> {
     if (cached) {
       return { cached: total_tokens, total: total_tokens };
     } else {
-      return {
+      const usage: Partial<TokenUsage> = {
         total: total_tokens,
         prompt: data.usage.input_tokens || 0,
         completion: data.usage.output_tokens || 0,
       };
+
+      // Track Anthropic prompt caching details
+      if (data.usage.cache_read_input_tokens || data.usage.cache_creation_input_tokens) {
+        usage.completionDetails = {
+          cacheReadInputTokens: data.usage.cache_read_input_tokens || 0,
+          cacheCreationInputTokens: data.usage.cache_creation_input_tokens || 0,
+        };
+      }
+
+      return usage;
     }
   }
   return {};
@@ -308,6 +323,7 @@ export function processAnthropicTools(tools: (Anthropic.Tool | AnthropicToolConf
   processedTools: (
     | Anthropic.Tool
     | Anthropic.Beta.Messages.BetaWebFetchTool20250910
+    | Anthropic.Beta.Messages.BetaWebFetchTool20260309
     | Anthropic.Beta.Messages.BetaWebSearchTool20250305
   )[];
   requiredBetaFeatures: string[];
@@ -315,6 +331,7 @@ export function processAnthropicTools(tools: (Anthropic.Tool | AnthropicToolConf
   const processedTools: (
     | Anthropic.Tool
     | Anthropic.Beta.Messages.BetaWebFetchTool20250910
+    | Anthropic.Beta.Messages.BetaWebFetchTool20260309
     | Anthropic.Beta.Messages.BetaWebSearchTool20250305
   )[] = [];
   const requiredBetaFeatures: string[] = [];
@@ -326,6 +343,11 @@ export function processAnthropicTools(tools: (Anthropic.Tool | AnthropicToolConf
         processedTools.push(transformWebFetchTool(tool as WebFetchToolConfig));
         if (!requiredBetaFeatures.includes('web-fetch-2025-09-10')) {
           requiredBetaFeatures.push('web-fetch-2025-09-10');
+        }
+      } else if (tool.type === 'web_fetch_20260309') {
+        processedTools.push(transformWebFetchToolV2(tool as WebFetchToolConfigV2));
+        if (!requiredBetaFeatures.includes('web-fetch-2026-03-09')) {
+          requiredBetaFeatures.push('web-fetch-2026-03-09');
         }
       } else if (tool.type === 'web_search_20250305') {
         processedTools.push(transformWebSearchTool(tool as WebSearchToolConfig));
@@ -378,6 +400,42 @@ function transformWebFetchTool(
   }
   if (config.cache_control) {
     tool.cache_control = config.cache_control;
+  }
+
+  return tool;
+}
+
+/**
+ * Transform web fetch tool config (v2) to Anthropic beta tool format with use_cache support
+ */
+function transformWebFetchToolV2(
+  config: WebFetchToolConfigV2,
+): Anthropic.Beta.Messages.BetaWebFetchTool20260309 {
+  const tool: Anthropic.Beta.Messages.BetaWebFetchTool20260309 = {
+    type: 'web_fetch_20260309',
+    name: 'web_fetch',
+  };
+
+  if (config.max_uses !== undefined) {
+    tool.max_uses = config.max_uses;
+  }
+  if (config.allowed_domains) {
+    tool.allowed_domains = config.allowed_domains;
+  }
+  if (config.blocked_domains) {
+    tool.blocked_domains = config.blocked_domains;
+  }
+  if (config.citations) {
+    tool.citations = config.citations;
+  }
+  if (config.max_content_tokens !== undefined) {
+    tool.max_content_tokens = config.max_content_tokens;
+  }
+  if (config.cache_control) {
+    tool.cache_control = config.cache_control;
+  }
+  if (config.use_cache !== undefined) {
+    tool.use_cache = config.use_cache;
   }
 
   return tool;

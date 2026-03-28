@@ -76,12 +76,15 @@ Claude models are available across multiple platforms. Here's how the model name
 | max_tokens      | ANTHROPIC_MAX_TOKENS  | The maximum length of the generated text (default: 1024)                            |
 | top_p           | -                     | Controls nucleus sampling, affecting the randomness of the output                   |
 | top_k           | -                     | Only sample from the top K options for each subsequent token                        |
+| stop_sequences  | -                     | Array of strings that will stop generation when encountered                         |
 | tools           | -                     | An array of tool or function definitions for the model to call                      |
 | tool_choice     | -                     | An object specifying the tool to call                                               |
 | effort          | -                     | Output effort level: `low`, `medium`, `high`, or `max`                              |
 | output_format   | -                     | JSON schema configuration for structured outputs                                    |
 | thinking        | -                     | Configuration for Claude's extended thinking (`enabled`, `adaptive`, or `disabled`) |
 | showThinking    | -                     | Whether to include thinking content in the output (default: true)                   |
+| cache_control   | -                     | Auto-apply cache_control to the last cacheable block in the request                 |
+| metadata        | -                     | Request metadata such as `user_id` for tracking purposes                            |
 | headers         | -                     | Additional headers to be sent with the API request                                  |
 | extra_body      | -                     | Additional parameters to be included in the API request body                        |
 
@@ -118,6 +121,8 @@ The Anthropic provider supports several options to customize the behavior of the
 - `top_k`: Only sample from the top K options for each subsequent token.
 - `tools`: An array of tool or function definitions for the model to call.
 - `tool_choice`: An object specifying the tool to call.
+- `stop_sequences`: An array of strings that stop generation when encountered.
+- `metadata`: Request metadata (e.g., `user_id`) passed to the API.
 - `extra_body`: Additional parameters to pass directly to the Anthropic API request body.
 
 Example configuration with options and prompts:
@@ -132,6 +137,31 @@ providers:
         custom_param: 'test_value'
 prompts:
   - file://prompt.json
+```
+
+### Stop Sequences
+
+Use `stop_sequences` to halt generation when Claude encounters specific strings:
+
+```yaml title="promptfooconfig.yaml"
+providers:
+  - id: anthropic:messages:claude-sonnet-4-5-20250929
+    config:
+      stop_sequences:
+        - "\n\nHuman:"
+        - 'STOP'
+```
+
+### Metadata
+
+Pass request metadata to the API for tracking or auditing purposes:
+
+```yaml title="promptfooconfig.yaml"
+providers:
+  - id: anthropic:messages:claude-sonnet-4-5-20250929
+    config:
+      metadata:
+        user_id: 'user-123'
 ```
 
 ### Tool Calling
@@ -184,17 +214,31 @@ providers:
           max_content_tokens: 50000
 ```
 
+A newer version `web_fetch_20260309` adds `use_cache` support for controlling whether cached content is used:
+
+```yaml title="promptfooconfig.yaml"
+providers:
+  - id: anthropic:messages:claude-sonnet-4-5-20250929
+    config:
+      tools:
+        - type: web_fetch_20260309
+          name: web_fetch
+          max_uses: 3
+          use_cache: false # Bypass cache for fresh content
+```
+
 **Web Fetch Tool Configuration Options:**
 
 | Parameter            | Type     | Description                                                                                  |
 | -------------------- | -------- | -------------------------------------------------------------------------------------------- |
-| `type`               | string   | Must be `web_fetch_20250910`                                                                 |
+| `type`               | string   | `web_fetch_20250910` or `web_fetch_20260309` (newer, adds `use_cache`)                       |
 | `name`               | string   | Must be `web_fetch`                                                                          |
 | `max_uses`           | number   | Maximum number of web fetches per request (optional)                                         |
 | `allowed_domains`    | string[] | List of domains to allow fetching from (optional, mutually exclusive with `blocked_domains`) |
 | `blocked_domains`    | string[] | List of domains to block fetching from (optional, mutually exclusive with `allowed_domains`) |
 | `citations`          | object   | Enable citations with `{ enabled: true }` (optional)                                         |
 | `max_content_tokens` | number   | Maximum tokens for web content (optional)                                                    |
+| `use_cache`          | boolean  | Whether to use cached content (`web_fetch_20260309` only, optional)                          |
 
 ##### Web Search Tool
 
@@ -289,12 +333,24 @@ prompts:
   content: '{{question}}'
 ```
 
+As a simpler alternative, use the top-level `cache_control` parameter to automatically apply a cache marker to the last cacheable block in the request, without annotating each block individually:
+
+```yaml title="promptfooconfig.yaml"
+providers:
+  - id: anthropic:messages:claude-sonnet-4-5-20250929
+    config:
+      cache_control:
+        type: ephemeral
+```
+
 Common use cases for caching:
 
 - System messages and instructions
 - Tool/function definitions
 - Large context documents
 - Frequently used images
+
+Cache read and creation token counts are tracked in the response's token usage details.
 
 See [Anthropic's Prompt Caching Guide](https://docs.anthropic.com/claude/docs/prompt-caching) for more details on requirements, pricing, and best practices.
 
@@ -324,6 +380,30 @@ prompts:
 ```
 
 See [Anthropic's Citations Guide](https://docs.anthropic.com/en/docs/build-with-claude/citations) for more details.
+
+### PDF Documents
+
+Claude can process PDF files using document content blocks. Pass the PDF as base64-encoded data:
+
+```yaml title="prompts.yaml"
+- role: user
+  content:
+    - type: document
+      source:
+        type: base64
+        media_type: application/pdf
+        data: '{{pdf_base64}}'
+    - type: text
+      text: 'Summarize this document'
+```
+
+Use a test var to supply the base64-encoded PDF content:
+
+```yaml title="promptfooconfig.yaml"
+tests:
+  - vars:
+      pdf_base64: file://document.pdf
+```
 
 ### Extended Thinking
 
@@ -371,6 +451,18 @@ thinking:
 ```yaml
 thinking:
   type: 'disabled'
+```
+
+The `display` field controls how thinking content is returned:
+
+- `'summarized'` (default) - thinking content is included in the response
+- `'omitted'` - thinking content is redacted but a signature is returned for multi-turn continuity (saves tokens)
+
+```yaml
+thinking:
+  type: enabled
+  budget_tokens: 10000
+  display: omitted
 ```
 
 When thinking is enabled or adaptive:

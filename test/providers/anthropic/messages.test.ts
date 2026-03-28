@@ -299,6 +299,92 @@ describe('AnthropicMessagesProvider', () => {
       );
     });
 
+    it('should include top_p and top_k in API call when configured', async () => {
+      const provider = createProvider('claude-3-5-sonnet-20241022', {
+        config: {
+          top_p: 0.9,
+          top_k: 40,
+        },
+      });
+
+      vi.spyOn(provider.anthropic.messages, 'create').mockResolvedValue({
+        content: [{ type: 'text', text: 'Test response' }],
+      } as Anthropic.Messages.Message);
+
+      await provider.callApi('Test prompt');
+
+      expect(provider.anthropic.messages.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          top_p: 0.9,
+          top_k: 40,
+        }),
+        {},
+      );
+    });
+
+    it('should include cache_control in API call when configured', async () => {
+      const provider = createProvider('claude-3-5-sonnet-20241022', {
+        config: {
+          cache_control: { type: 'ephemeral' },
+        },
+      });
+
+      vi.spyOn(provider.anthropic.messages, 'create').mockResolvedValue({
+        content: [{ type: 'text', text: 'Test response' }],
+      } as Anthropic.Messages.Message);
+
+      await provider.callApi('Test prompt');
+
+      expect(provider.anthropic.messages.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cache_control: { type: 'ephemeral' },
+        }),
+        {},
+      );
+    });
+
+    it('should include stop_sequences in API call when configured', async () => {
+      const provider = createProvider('claude-3-5-sonnet-20241022', {
+        config: {
+          stop_sequences: ['\n\nHuman:', 'STOP'],
+        },
+      });
+
+      vi.spyOn(provider.anthropic.messages, 'create').mockResolvedValue({
+        content: [{ type: 'text', text: 'Test response' }],
+      } as Anthropic.Messages.Message);
+
+      await provider.callApi('Test prompt');
+
+      expect(provider.anthropic.messages.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stop_sequences: ['\n\nHuman:', 'STOP'],
+        }),
+        {},
+      );
+    });
+
+    it('should include metadata in API call when configured', async () => {
+      const provider = createProvider('claude-3-5-sonnet-20241022', {
+        config: {
+          metadata: { user_id: 'user-123' },
+        },
+      });
+
+      vi.spyOn(provider.anthropic.messages, 'create').mockResolvedValue({
+        content: [{ type: 'text', text: 'Test response' }],
+      } as Anthropic.Messages.Message);
+
+      await provider.callApi('Test prompt');
+
+      expect(provider.anthropic.messages.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: { user_id: 'user-123' },
+        }),
+        {},
+      );
+    });
+
     it('should not use cache if caching is disabled for ToolUse requests', async () => {
       vi.spyOn(provider.anthropic.messages, 'create').mockResolvedValue({
         content: [

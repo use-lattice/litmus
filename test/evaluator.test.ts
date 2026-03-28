@@ -402,6 +402,8 @@ describe('evaluator', () => {
         reasoning: 0,
         acceptedPrediction: 0,
         rejectedPrediction: 0,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
       },
       assertions: {
         total: 0,
@@ -413,6 +415,8 @@ describe('evaluator', () => {
           reasoning: 0,
           acceptedPrediction: 0,
           rejectedPrediction: 0,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 0,
         },
       },
     });
@@ -448,6 +452,8 @@ describe('evaluator', () => {
         reasoning: 0,
         acceptedPrediction: 0,
         rejectedPrediction: 0,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
       },
       assertions: {
         total: 0,
@@ -459,6 +465,8 @@ describe('evaluator', () => {
           reasoning: 0,
           acceptedPrediction: 0,
           rejectedPrediction: 0,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 0,
         },
       },
     });
@@ -494,6 +502,8 @@ describe('evaluator', () => {
         reasoning: 0,
         acceptedPrediction: 0,
         rejectedPrediction: 0,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
       },
       assertions: {
         total: 0,
@@ -505,6 +515,8 @@ describe('evaluator', () => {
           reasoning: 0,
           acceptedPrediction: 0,
           rejectedPrediction: 0,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 0,
         },
       },
     });
@@ -596,6 +608,8 @@ describe('evaluator', () => {
         reasoning: 0,
         acceptedPrediction: 0,
         rejectedPrediction: 0,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
       },
       assertions: {
         total: 0,
@@ -607,6 +621,8 @@ describe('evaluator', () => {
           reasoning: 0,
           acceptedPrediction: 0,
           rejectedPrediction: 0,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 0,
         },
       },
     });
@@ -642,6 +658,8 @@ describe('evaluator', () => {
         reasoning: 0,
         acceptedPrediction: 0,
         rejectedPrediction: 0,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
       },
       assertions: {
         total: 0,
@@ -653,6 +671,8 @@ describe('evaluator', () => {
           reasoning: 0,
           acceptedPrediction: 0,
           rejectedPrediction: 0,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 0,
         },
       },
     });
@@ -688,6 +708,8 @@ describe('evaluator', () => {
         reasoning: 0,
         acceptedPrediction: 0,
         rejectedPrediction: 0,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
       },
       assertions: {
         total: 0,
@@ -699,6 +721,8 @@ describe('evaluator', () => {
           reasoning: 0,
           acceptedPrediction: 0,
           rejectedPrediction: 0,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 0,
         },
       },
     });
@@ -729,6 +753,8 @@ describe('evaluator', () => {
         reasoning: 0,
         acceptedPrediction: 0,
         rejectedPrediction: 0,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
       },
       assertions: {
         total: 0,
@@ -740,6 +766,8 @@ describe('evaluator', () => {
           reasoning: 0,
           acceptedPrediction: 0,
           rejectedPrediction: 0,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 0,
         },
       },
     });
@@ -770,6 +798,8 @@ describe('evaluator', () => {
         reasoning: 0,
         acceptedPrediction: 0,
         rejectedPrediction: 0,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
       },
       assertions: {
         total: 0,
@@ -781,6 +811,8 @@ describe('evaluator', () => {
           reasoning: 0,
           acceptedPrediction: 0,
           rejectedPrediction: 0,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 0,
         },
       },
     });
@@ -811,6 +843,8 @@ describe('evaluator', () => {
         reasoning: 11,
         acceptedPrediction: 12,
         rejectedPrediction: 13,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
       },
       assertions: {
         total: 0,
@@ -822,6 +856,8 @@ describe('evaluator', () => {
           reasoning: 0,
           acceptedPrediction: 0,
           rejectedPrediction: 0,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 0,
         },
       },
     });
@@ -1473,6 +1509,8 @@ describe('evaluator', () => {
         reasoning: 0,
         acceptedPrediction: 0,
         rejectedPrediction: 0,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
       },
       assertions: {
         total: 0,
@@ -1484,6 +1522,8 @@ describe('evaluator', () => {
           reasoning: 0,
           acceptedPrediction: 0,
           rejectedPrediction: 0,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 0,
         },
       },
     });
@@ -3765,6 +3805,8 @@ describe('evaluator', () => {
         reasoning: 0,
         acceptedPrediction: 0,
         rejectedPrediction: 0,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
       },
       numRequests: 1, // Only provider requests
       assertions: {
@@ -3777,6 +3819,8 @@ describe('evaluator', () => {
           reasoning: 0,
           acceptedPrediction: 0,
           rejectedPrediction: 0,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 0,
         },
       },
     });
@@ -3895,6 +3939,8 @@ describe('evaluator', () => {
         reasoning: 0,
         acceptedPrediction: 0,
         rejectedPrediction: 0,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
       },
       assertions: {
         total: 50, // Assertion tokens tracked separately
@@ -3906,6 +3952,8 @@ describe('evaluator', () => {
           reasoning: 0,
           acceptedPrediction: 0,
           rejectedPrediction: 0,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 0,
         },
       },
     });
@@ -4787,6 +4835,8 @@ describe('runEval', () => {
         reasoning: 0,
         acceptedPrediction: 0,
         rejectedPrediction: 0,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 0,
       },
       numRequests: 1, // Only provider requests
       assertions: {
@@ -4799,6 +4849,8 @@ describe('runEval', () => {
           reasoning: 0,
           acceptedPrediction: 0,
           rejectedPrediction: 0,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 0,
         },
       },
     });

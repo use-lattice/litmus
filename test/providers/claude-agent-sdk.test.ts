@@ -489,6 +489,18 @@ describe('ClaudeCodeSDKProvider', () => {
         expect(result.size).toBe(1);
         expect(result.get('ANTHROPIC_API_KEY')).toEqual(['anthropic:claude-agent-sdk']);
       });
+
+      it('should not report missing key when apiKeyRequired is false', () => {
+        delete process.env.ANTHROPIC_API_KEY;
+        delete process.env.CLAUDE_CODE_USE_VERTEX;
+        delete process.env.CLAUDE_CODE_USE_BEDROCK;
+
+        const provider = new ClaudeCodeSDKProvider({
+          config: { apiKeyRequired: false },
+        });
+        const result = checkProviderApiKeys([provider]);
+        expect(result.size).toBe(0);
+      });
     });
 
     describe('provider-level env overrides via loadApiProvider', () => {

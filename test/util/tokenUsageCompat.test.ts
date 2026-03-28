@@ -190,6 +190,8 @@ describe('tokenUsageCompat', () => {
           reasoning: 0,
           acceptedPrediction: 0,
           rejectedPrediction: 0,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 0,
         },
         assertions: {
           total: 0,
@@ -201,6 +203,8 @@ describe('tokenUsageCompat', () => {
             reasoning: 0,
             acceptedPrediction: 0,
             rejectedPrediction: 0,
+            cacheReadInputTokens: 0,
+            cacheCreationInputTokens: 0,
           },
         },
       });
