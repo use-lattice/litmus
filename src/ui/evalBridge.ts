@@ -5,6 +5,8 @@
  * and the React state management in the Ink UI.
  */
 
+import type { Dispatch } from 'react';
+
 import { assignProviderUiKeys, getProviderUiKey } from '../util/providerIdentity';
 import { TokenUsageTracker } from '../util/tokenUsage';
 import { TIMING } from './constants';
@@ -152,7 +154,7 @@ interface PromptTrackingState {
  * @returns A progress callback function compatible with the evaluator
  */
 function createProgressCallbackWithBatching(
-  dispatch: React.Dispatch<EvalAction>,
+  dispatch: Dispatch<EvalAction>,
   queueProgress: (item: BatchProgressItem) => void,
 ): (
   completed: number,
@@ -347,7 +349,7 @@ export interface EvalUIController {
  * @param dispatch - The dispatch function from EvalContext
  * @returns An EvalUIController object
  */
-export function createEvalUIController(dispatch: React.Dispatch<EvalAction>): EvalUIController {
+export function createEvalUIController(dispatch: Dispatch<EvalAction>): EvalUIController {
   // Create batching dispatcher for high-concurrency performance
   const batcher = createBatchingDispatcher(dispatch);
 

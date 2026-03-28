@@ -61,7 +61,8 @@ export const TableRow = memo(function TableRow({
             break;
 
           case 'var': {
-            const varValue = rowData.originalRow.vars[varIdx++] || '';
+            const rawVarValue = rowData.originalRow.vars[varIdx++];
+            const varValue = String(rawVarValue ?? '');
             cellContent = (
               <TextCell content={varValue} width={column.width} isSelected={isCellSelected} />
             );
