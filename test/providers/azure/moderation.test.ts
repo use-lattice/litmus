@@ -175,14 +175,14 @@ describe('Azure Moderation', () => {
       const key = getModerationCacheKey(modelName, config, content);
 
       expect(key).toBe(
-        'azure-moderation:test-model:{"blocklistNames":[],"haltOnBlocklistHit":false,"passthrough":{}}:"test content"',
+        'azure-moderation:test-model:{"headers":{},"blocklistNames":[],"haltOnBlocklistHit":false,"passthrough":{}}:"test content"',
       );
     });
 
     it('should handle empty content', () => {
       const key = getModerationCacheKey('model', {}, '');
       expect(key).toBe(
-        'azure-moderation:model:{"blocklistNames":[],"haltOnBlocklistHit":false,"passthrough":{}}:""',
+        'azure-moderation:model:{"headers":{},"blocklistNames":[],"haltOnBlocklistHit":false,"passthrough":{}}:""',
       );
     });
 
@@ -198,7 +198,7 @@ describe('Azure Moderation', () => {
       );
 
       expect(key).toBe(
-        'azure-moderation:model:{"blocklistNames":["custom-list"],"haltOnBlocklistHit":true,"passthrough":{"outputType":"EightSeverityLevels"}}:"content"',
+        'azure-moderation:model:{"headers":{},"blocklistNames":["custom-list"],"haltOnBlocklistHit":true,"passthrough":{"outputType":"EightSeverityLevels"}}:"content"',
       );
     });
 
@@ -226,22 +226,34 @@ describe('Azure Moderation', () => {
       expect(versionKey1).not.toBe(versionKey2);
     });
 
-    it('should ignore auth-only config in the cache key', () => {
-      const firstConfig = {
-        apiKey: 'key',
-        endpoint: 'https://test.com',
-        headers: { 'X-Test': 'value' },
-      };
-      const secondConfig = {
-        apiKey: 'different-key',
-        endpoint: 'https://test.com',
-        headers: { 'X-Test': 'different-value' },
-      };
-
-      const firstKey = getModerationCacheKey('model', firstConfig, 'content');
-      const secondKey = getModerationCacheKey('model', secondConfig, 'content');
+    it('should ignore apiKey but include headers in the cache key', () => {
+      const firstKey = getModerationCacheKey(
+        'model',
+        { apiKey: 'key-1', endpoint: 'https://test.com' },
+        'content',
+      );
+      const secondKey = getModerationCacheKey(
+        'model',
+        { apiKey: 'key-2', endpoint: 'https://test.com' },
+        'content',
+      );
 
       expect(firstKey).toBe(secondKey);
+    });
+
+    it('should include custom headers in the cache key', () => {
+      const firstKey = getModerationCacheKey(
+        'model',
+        { endpoint: 'https://test.com', headers: { 'X-Custom': 'a' } },
+        'content',
+      );
+      const secondKey = getModerationCacheKey(
+        'model',
+        { endpoint: 'https://test.com', headers: { 'X-Custom': 'b' } },
+        'content',
+      );
+
+      expect(firstKey).not.toBe(secondKey);
     });
   });
 

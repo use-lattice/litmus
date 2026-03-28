@@ -283,6 +283,11 @@ export const providerMap: ProviderFactory[] = [
       const deploymentName = splits[2];
 
       if (modelType === 'moderation') {
+        if (providerPath.startsWith('azureopenai:')) {
+          throw new Error(
+            'Azure OpenAI does not support moderation. Use azure:moderation instead, which routes to Azure Content Safety.',
+          );
+        }
         return new AzureModerationProvider(
           deploymentName ||
             providerOptions.config?.deploymentName ||

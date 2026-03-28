@@ -256,6 +256,29 @@ describe('Provider Registry', () => {
       ).rejects.toThrow('Unknown Azure model type');
     });
 
+    it('should handle azure:moderation and reject azureopenai:moderation', async () => {
+      const factory = providerMap.find((f) => f.test('azure:moderation'));
+      expect(factory).toBeDefined();
+
+      const moderationProvider = await factory!.create(
+        'azure:moderation',
+        mockProviderOptions,
+        mockContext,
+      );
+      expect(moderationProvider).toBeDefined();
+
+      const moderationWithModel = await factory!.create(
+        'azure:moderation:text-content-safety',
+        mockProviderOptions,
+        mockContext,
+      );
+      expect(moderationWithModel).toBeDefined();
+
+      await expect(
+        factory!.create('azureopenai:moderation', mockProviderOptions, mockContext),
+      ).rejects.toThrow('Azure OpenAI does not support moderation');
+    });
+
     it('should handle bedrock providers correctly', async () => {
       const factory = providerMap.find((f) => f.test('bedrock:completion:anthropic.claude-v2'));
       expect(factory).toBeDefined();
