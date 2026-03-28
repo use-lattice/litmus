@@ -202,7 +202,11 @@ export class AzureModerationProvider extends AzureGenericProvider implements Api
     let cacheKey = '';
 
     if (useCache) {
-      cacheKey = getModerationCacheKey(this.modelName, this.configWithHeaders, assistantResponse);
+      cacheKey = getModerationCacheKey(
+        this.modelName,
+        { ...this.configWithHeaders, endpoint: this.endpoint, apiVersion: this.apiVersion },
+        assistantResponse,
+      );
       const cache = await getCache();
       const cachedResponse = await cache.get(cacheKey);
 

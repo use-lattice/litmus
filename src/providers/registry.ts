@@ -278,14 +278,16 @@ export const providerMap: ProviderFactory[] = [
       providerOptions: ProviderOptions,
       _context: LoadApiProviderContext,
     ) => {
-      // Handle other Azure providers
       const splits = providerPath.split(':');
       const modelType = splits[1];
       const deploymentName = splits[2];
 
       if (modelType === 'moderation') {
         return new AzureModerationProvider(
-          deploymentName || providerOptions.config?.modelName || 'text-content-safety',
+          deploymentName ||
+            providerOptions.config?.deploymentName ||
+            providerOptions.config?.modelName ||
+            'text-content-safety',
           providerOptions,
         );
       }
