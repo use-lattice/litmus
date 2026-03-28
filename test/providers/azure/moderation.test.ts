@@ -175,14 +175,14 @@ describe('Azure Moderation', () => {
       const key = getModerationCacheKey(modelName, config, content);
 
       expect(key).toBe(
-        'azure-moderation:test-model:{"headers":{},"blocklistNames":[],"haltOnBlocklistHit":false,"passthrough":{}}:"test content"',
+        'azure-moderation:test-model:{"blocklistNames":[],"haltOnBlocklistHit":false,"passthrough":{}}:"test content"',
       );
     });
 
     it('should handle empty content', () => {
       const key = getModerationCacheKey('model', {}, '');
       expect(key).toBe(
-        'azure-moderation:model:{"headers":{},"blocklistNames":[],"haltOnBlocklistHit":false,"passthrough":{}}:""',
+        'azure-moderation:model:{"blocklistNames":[],"haltOnBlocklistHit":false,"passthrough":{}}:""',
       );
     });
 
@@ -198,7 +198,7 @@ describe('Azure Moderation', () => {
       );
 
       expect(key).toBe(
-        'azure-moderation:model:{"headers":{},"blocklistNames":["custom-list"],"haltOnBlocklistHit":true,"passthrough":{"outputType":"EightSeverityLevels"}}:"content"',
+        'azure-moderation:model:{"blocklistNames":["custom-list"],"haltOnBlocklistHit":true,"passthrough":{"outputType":"EightSeverityLevels"}}:"content"',
       );
     });
 
@@ -241,19 +241,22 @@ describe('Azure Moderation', () => {
       expect(firstKey).toBe(secondKey);
     });
 
-    it('should include custom headers in the cache key', () => {
+    it('should differentiate by headers without leaking raw values', () => {
       const firstKey = getModerationCacheKey(
         'model',
-        { endpoint: 'https://test.com', headers: { 'X-Custom': 'a' } },
+        { endpoint: 'https://test.com', headers: { Authorization: 'Bearer secret-token-1' } },
         'content',
       );
       const secondKey = getModerationCacheKey(
         'model',
-        { endpoint: 'https://test.com', headers: { 'X-Custom': 'b' } },
+        { endpoint: 'https://test.com', headers: { Authorization: 'Bearer secret-token-2' } },
         'content',
       );
 
       expect(firstKey).not.toBe(secondKey);
+      expect(firstKey).not.toContain('secret-token-1');
+      expect(secondKey).not.toContain('secret-token-2');
+      expect(firstKey).toContain('headersHash');
     });
   });
 

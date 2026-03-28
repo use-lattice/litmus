@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 import { getCache, isCacheEnabled } from '../../cache';
 import { getEnvString } from '../../envars';
 import logger from '../../logger';
@@ -108,7 +110,13 @@ export function getModerationCacheKey(
   const cacheConfig = {
     endpoint: config.endpoint,
     apiVersion: config.apiVersion,
-    headers: config.headers || {},
+    headersHash: config.headers
+      ? crypto
+          .createHash('sha256')
+          .update(JSON.stringify(config.headers))
+          .digest('hex')
+          .slice(0, 16)
+      : undefined,
     blocklistNames: config.blocklistNames || [],
     haltOnBlocklistHit: config.haltOnBlocklistHit ?? false,
     passthrough: config.passthrough || {},
