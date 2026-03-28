@@ -257,6 +257,24 @@ export function parseMessages(messages: string): {
   return { system, extractedMessages, thinking };
 }
 
+/**
+ * Compute input cost with Anthropic cache pricing applied.
+ * Cache reads are 10% of base input rate, cache writes are 125%.
+ */
+function calculateCacheInputCost(
+  baseInputRate: number,
+  promptTokens: number,
+  cacheRead: number,
+  cacheCreation: number,
+): number {
+  const uncached = Math.max(0, promptTokens - cacheRead - cacheCreation);
+  return (
+    uncached * baseInputRate +
+    cacheRead * baseInputRate * 0.1 +
+    cacheCreation * baseInputRate * 1.25
+  );
+}
+
 export function calculateAnthropicCost(
   modelName: string,
   config: any,
@@ -269,10 +287,20 @@ export function calculateAnthropicCost(
     return calculateCostBase(modelName, config, promptTokens, completionTokens, ANTHROPIC_MODELS);
   }
 
-  // Determine effective input token count for tiered pricing threshold.
-  // Anthropic docs: the >200k threshold considers input + cache read + cache creation tokens.
-  const effectiveInputTokens =
-    (promptTokens ?? 0) + (cacheReadTokens ?? 0) + (cacheCreationTokens ?? 0);
+  if (
+    !Number.isFinite(promptTokens) ||
+    !Number.isFinite(completionTokens) ||
+    typeof promptTokens === 'undefined' ||
+    typeof completionTokens === 'undefined'
+  ) {
+    return calculateCostBase(modelName, config, promptTokens, completionTokens, ANTHROPIC_MODELS);
+  }
+
+  const cacheRead = cacheReadTokens ?? 0;
+  const cacheCreation = cacheCreationTokens ?? 0;
+
+  // Anthropic docs: the >200k threshold considers input + cache read + cache creation tokens
+  const effectiveInputTokens = promptTokens + cacheRead + cacheCreation;
 
   // Claude Sonnet models with 1M context support have tiered pricing based on prompt size
   const hasTieredPricing = [
@@ -282,53 +310,26 @@ export function calculateAnthropicCost(
     'claude-sonnet-4-6-latest',
   ].includes(modelName);
 
-  if (
-    hasTieredPricing &&
-    Number.isFinite(promptTokens) &&
-    Number.isFinite(completionTokens) &&
-    typeof promptTokens !== 'undefined' &&
-    typeof completionTokens !== 'undefined'
-  ) {
+  if (hasTieredPricing) {
     const isLongContext = effectiveInputTokens > 200_000;
     const baseInputRate = isLongContext ? 6 / 1e6 : 3 / 1e6;
     const outputRate = isLongContext ? 22.5 / 1e6 : 15 / 1e6;
 
-    // Anthropic cache pricing: reads are 10% of base, writes are 25% of base
-    const cacheReadRate = baseInputRate * 0.1;
-    const cacheWriteRate = baseInputRate * 1.25;
-
-    // promptTokens from the API is the non-cached input portion
-    const uncachedInputTokens = promptTokens - (cacheReadTokens ?? 0) - (cacheCreationTokens ?? 0);
-    const inputCost =
-      Math.max(0, uncachedInputTokens) * baseInputRate +
-      (cacheReadTokens ?? 0) * cacheReadRate +
-      (cacheCreationTokens ?? 0) * cacheWriteRate;
-
-    return inputCost + (completionTokens ?? 0) * outputRate;
+    return (
+      calculateCacheInputCost(baseInputRate, promptTokens, cacheRead, cacheCreation) +
+      completionTokens * outputRate
+    );
   }
 
-  // For non-tiered models, still apply cache pricing if cache tokens are present
-  const modelInfo = ANTHROPIC_MODELS.find((m) => m.id === modelName);
-  if (
-    modelInfo &&
-    (cacheReadTokens || cacheCreationTokens) &&
-    Number.isFinite(promptTokens) &&
-    Number.isFinite(completionTokens) &&
-    typeof promptTokens !== 'undefined' &&
-    typeof completionTokens !== 'undefined'
-  ) {
-    const baseInputRate = modelInfo.cost.input;
-    const outputRate = modelInfo.cost.output;
-    const cacheReadRate = baseInputRate * 0.1;
-    const cacheWriteRate = baseInputRate * 1.25;
-
-    const uncachedInputTokens = promptTokens - (cacheReadTokens ?? 0) - (cacheCreationTokens ?? 0);
-    const inputCost =
-      Math.max(0, uncachedInputTokens) * baseInputRate +
-      (cacheReadTokens ?? 0) * cacheReadRate +
-      (cacheCreationTokens ?? 0) * cacheWriteRate;
-
-    return inputCost + completionTokens * outputRate;
+  // For non-tiered models, apply cache pricing only when cache tokens are present
+  if (cacheRead || cacheCreation) {
+    const modelInfo = ANTHROPIC_MODELS.find((m) => m.id === modelName);
+    if (modelInfo) {
+      return (
+        calculateCacheInputCost(modelInfo.cost.input, promptTokens, cacheRead, cacheCreation) +
+        completionTokens * modelInfo.cost.output
+      );
+    }
   }
 
   return calculateCostBase(modelName, config, promptTokens, completionTokens, ANTHROPIC_MODELS);
@@ -342,15 +343,15 @@ export function getTokenUsage(data: any, cached: boolean): Partial<TokenUsage> {
     } else {
       const usage: Partial<TokenUsage> = {
         total: total_tokens,
-        prompt: data.usage.input_tokens || 0,
-        completion: data.usage.output_tokens || 0,
+        prompt: data.usage.input_tokens ?? 0,
+        completion: data.usage.output_tokens ?? 0,
       };
 
       // Track Anthropic prompt caching details
       if (data.usage.cache_read_input_tokens || data.usage.cache_creation_input_tokens) {
         usage.completionDetails = {
-          cacheReadInputTokens: data.usage.cache_read_input_tokens || 0,
-          cacheCreationInputTokens: data.usage.cache_creation_input_tokens || 0,
+          cacheReadInputTokens: data.usage.cache_read_input_tokens ?? 0,
+          cacheCreationInputTokens: data.usage.cache_creation_input_tokens ?? 0,
         };
       }
 
@@ -417,8 +418,29 @@ export function processAnthropicTools(tools: (Anthropic.Tool | AnthropicToolConf
 }
 
 /**
- * Transform web fetch tool config to Anthropic beta tool format
+ * Apply shared web fetch tool fields from config onto the SDK tool object.
  */
+function applyWebFetchFields(tool: any, config: WebFetchToolConfig | WebFetchToolConfigV2): void {
+  if (config.max_uses !== undefined) {
+    tool.max_uses = config.max_uses;
+  }
+  if (config.allowed_domains) {
+    tool.allowed_domains = config.allowed_domains;
+  }
+  if (config.blocked_domains) {
+    tool.blocked_domains = config.blocked_domains;
+  }
+  if (config.citations) {
+    tool.citations = config.citations;
+  }
+  if (config.max_content_tokens !== undefined) {
+    tool.max_content_tokens = config.max_content_tokens;
+  }
+  if (config.cache_control) {
+    tool.cache_control = config.cache_control;
+  }
+}
+
 function transformWebFetchTool(
   config: WebFetchToolConfig,
 ): Anthropic.Beta.Messages.BetaWebFetchTool20250910 {
@@ -426,32 +448,10 @@ function transformWebFetchTool(
     type: 'web_fetch_20250910',
     name: 'web_fetch',
   };
-
-  if (config.max_uses !== undefined) {
-    tool.max_uses = config.max_uses;
-  }
-  if (config.allowed_domains) {
-    tool.allowed_domains = config.allowed_domains;
-  }
-  if (config.blocked_domains) {
-    tool.blocked_domains = config.blocked_domains;
-  }
-  if (config.citations) {
-    tool.citations = config.citations;
-  }
-  if (config.max_content_tokens !== undefined) {
-    tool.max_content_tokens = config.max_content_tokens;
-  }
-  if (config.cache_control) {
-    tool.cache_control = config.cache_control;
-  }
-
+  applyWebFetchFields(tool, config);
   return tool;
 }
 
-/**
- * Transform web fetch tool config (v2) to Anthropic beta tool format with use_cache support
- */
 function transformWebFetchToolV2(
   config: WebFetchToolConfigV2,
 ): Anthropic.Beta.Messages.BetaWebFetchTool20260309 {
@@ -459,29 +459,10 @@ function transformWebFetchToolV2(
     type: 'web_fetch_20260309',
     name: 'web_fetch',
   };
-
-  if (config.max_uses !== undefined) {
-    tool.max_uses = config.max_uses;
-  }
-  if (config.allowed_domains) {
-    tool.allowed_domains = config.allowed_domains;
-  }
-  if (config.blocked_domains) {
-    tool.blocked_domains = config.blocked_domains;
-  }
-  if (config.citations) {
-    tool.citations = config.citations;
-  }
-  if (config.max_content_tokens !== undefined) {
-    tool.max_content_tokens = config.max_content_tokens;
-  }
-  if (config.cache_control) {
-    tool.cache_control = config.cache_control;
-  }
+  applyWebFetchFields(tool, config);
   if (config.use_cache !== undefined) {
     tool.use_cache = config.use_cache;
   }
-
   return tool;
 }
 

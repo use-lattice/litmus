@@ -237,11 +237,8 @@ export class AnthropicMessagesProvider extends AnthropicGenericProvider {
       ...(typeof config?.extra_body === 'object' && config.extra_body ? config.extra_body : {}),
     };
 
-    // Warn about incompatible params with extended thinking
-    if (config.thinking || thinking) {
-      if (config.top_k != null) {
-        logger.warn('top_k is incompatible with extended thinking and will be ignored');
-      }
+    if ((config.thinking || thinking) && config.top_k != null) {
+      logger.warn('top_k is incompatible with extended thinking and will be ignored');
     }
 
     logger.debug('Calling Anthropic Messages API', { params });
