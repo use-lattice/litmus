@@ -127,6 +127,7 @@ export class AnthropicMessagesProvider extends AnthropicGenericProvider {
           completion: response.tokenUsage.completion,
           total: response.tokenUsage.total,
           cached: response.tokenUsage.cached,
+          completionDetails: response.tokenUsage.completionDetails,
         };
       }
 

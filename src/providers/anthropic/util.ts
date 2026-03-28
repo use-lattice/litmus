@@ -337,13 +337,18 @@ export function calculateAnthropicCost(
 
 export function getTokenUsage(data: any, cached: boolean): Partial<TokenUsage> {
   if (data.usage) {
-    const total_tokens = data.usage.input_tokens + data.usage.output_tokens;
+    // Anthropic: total input = input_tokens + cache_read_input_tokens + cache_creation_input_tokens
+    const cacheRead = data.usage.cache_read_input_tokens ?? 0;
+    const cacheCreation = data.usage.cache_creation_input_tokens ?? 0;
+    const allInputTokens = (data.usage.input_tokens ?? 0) + cacheRead + cacheCreation;
+    const total_tokens = allInputTokens + (data.usage.output_tokens ?? 0);
+
     if (cached) {
       return { cached: total_tokens, total: total_tokens };
     } else {
       const usage: Partial<TokenUsage> = {
         total: total_tokens,
-        prompt: data.usage.input_tokens ?? 0,
+        prompt: allInputTokens,
         completion: data.usage.output_tokens ?? 0,
       };
 
@@ -353,8 +358,8 @@ export function getTokenUsage(data: any, cached: boolean): Partial<TokenUsage> {
         data.usage.cache_creation_input_tokens != null
       ) {
         usage.completionDetails = {
-          cacheReadInputTokens: data.usage.cache_read_input_tokens ?? 0,
-          cacheCreationInputTokens: data.usage.cache_creation_input_tokens ?? 0,
+          cacheReadInputTokens: cacheRead,
+          cacheCreationInputTokens: cacheCreation,
         };
       }
 

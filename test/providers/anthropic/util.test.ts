@@ -1261,7 +1261,7 @@ describe('Anthropic utilities', () => {
       expect(result).toEqual({});
     });
 
-    it('should track cache_read_input_tokens in completionDetails', () => {
+    it('should include cache tokens in total and prompt counts', () => {
       const data = {
         usage: {
           input_tokens: 100,
@@ -1271,9 +1271,10 @@ describe('Anthropic utilities', () => {
         },
       };
       const result = getTokenUsage(data, false);
+      // total input = input_tokens + cache_read + cache_creation = 100 + 80 + 0 = 180
       expect(result).toEqual({
-        total: 150,
-        prompt: 100,
+        total: 230, // 180 input + 50 output
+        prompt: 180, // 100 uncached + 80 cache_read + 0 cache_creation
         completion: 50,
         completionDetails: {
           cacheReadInputTokens: 80,
@@ -1282,7 +1283,7 @@ describe('Anthropic utilities', () => {
       });
     });
 
-    it('should track cache_creation_input_tokens in completionDetails', () => {
+    it('should include cache_creation_input_tokens in totals', () => {
       const data = {
         usage: {
           input_tokens: 100,
@@ -1292,9 +1293,10 @@ describe('Anthropic utilities', () => {
         },
       };
       const result = getTokenUsage(data, false);
+      // total input = 100 + 0 + 60 = 160
       expect(result).toEqual({
-        total: 150,
-        prompt: 100,
+        total: 210, // 160 input + 50 output
+        prompt: 160, // 100 uncached + 0 cache_read + 60 cache_creation
         completion: 50,
         completionDetails: {
           cacheReadInputTokens: 0,
