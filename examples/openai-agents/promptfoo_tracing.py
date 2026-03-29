@@ -17,7 +17,6 @@ from agents.tracing.processor_interface import TracingExporter, TracingProcessor
 from agents.tracing.spans import Span
 from agents.tracing.traces import Trace
 
-
 TRACEPARENT_RE = re.compile(r"^[\da-f]{2}-([\da-f]{32})-([\da-f]{16})-[\da-f]{2}$")
 _CURRENT_PROCESSOR: "PromptfooTracingProcessor | None" = None
 
@@ -73,7 +72,10 @@ def _value_to_otlp(value: Any) -> dict[str, Any]:
 
 
 def _attributes_to_otlp(attributes: dict[str, Any]) -> list[dict[str, Any]]:
-    return [{"key": key, "value": _value_to_otlp(value)} for key, value in attributes.items()]
+    return [
+        {"key": key, "value": _value_to_otlp(value)}
+        for key, value in attributes.items()
+    ]
 
 
 class PromptfooOTLPExporter(TracingExporter):
@@ -103,7 +105,9 @@ class PromptfooOTLPExporter(TracingExporter):
                         "attributes": _attributes_to_otlp(
                             {
                                 "service.name": "promptfoo-openai-agents-python-example",
-                                "service.version": getattr(agents, "__version__", "unknown"),
+                                "service.version": getattr(
+                                    agents, "__version__", "unknown"
+                                ),
                                 "evaluation.id": self._evaluation_id,
                                 "test.case.id": self._test_case_id,
                             }
@@ -134,7 +138,9 @@ class PromptfooOTLPExporter(TracingExporter):
             with urllib.request.urlopen(request, timeout=5) as response:
                 response.read()
         except urllib.error.URLError as exc:
-            raise RuntimeError(f"Failed to export Promptfoo OTLP traces: {exc}") from exc
+            raise RuntimeError(
+                f"Failed to export Promptfoo OTLP traces: {exc}"
+            ) from exc
 
     def _span_to_otlp(self, span: Span[Any]) -> dict[str, Any]:
         span_data = span.span_data.export()

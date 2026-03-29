@@ -16,12 +16,19 @@ import re
 from pathlib import Path
 from typing import Any, Iterable
 
-from agents import Agent, ItemHelpers, ModelSettings, RunContextWrapper, Runner, SQLiteSession
-from agents import function_tool, handoff, trace
+from agents import (
+    Agent,
+    ItemHelpers,
+    ModelSettings,
+    RunContextWrapper,
+    Runner,
+    SQLiteSession,
+    function_tool,
+    handoff,
+    trace,
+)
 from agents.items import HandoffOutputItem, MessageOutputItem, ToolCallOutputItem
-
 from promptfoo_tracing import configure_promptfoo_tracing
-
 
 DEFAULT_MODEL = os.getenv("OPENAI_AGENT_MODEL", "gpt-5.4-mini")
 SESSION_DB_PATH = Path(__file__).with_name(".promptfoo-openai-agents.sqlite3")
@@ -54,7 +61,9 @@ FAQ_ANSWERS = {
 CONFIRMATION_NUMBER_RE = re.compile(
     r"\bconfirmation number(?: is|:)?\s+([A-Z0-9]{3,})\b", re.IGNORECASE
 )
-PASSENGER_NAME_RE = re.compile(r"\bmy name is\s+([A-Za-z]+(?:\s+[A-Za-z]+)*)", re.IGNORECASE)
+PASSENGER_NAME_RE = re.compile(
+    r"\bmy name is\s+([A-Za-z]+(?:\s+[A-Za-z]+)*)", re.IGNORECASE
+)
 SEAT_NUMBER_RE = re.compile(r"\bseat\s+([0-9]{1,2}[A-Z])\b", re.IGNORECASE)
 
 
@@ -129,7 +138,9 @@ def _format_transcript(step_index: int, step_prompt: str, result: Any) -> list[s
         if isinstance(item, MessageOutputItem):
             lines.append(f"{item.agent.name}: {ItemHelpers.text_message_output(item)}")
         elif isinstance(item, HandoffOutputItem):
-            lines.append(f"Handoff: {item.source_agent.name} -> {item.target_agent.name}")
+            lines.append(
+                f"Handoff: {item.source_agent.name} -> {item.target_agent.name}"
+            )
         elif isinstance(item, ToolCallOutputItem):
             lines.append(f"Tool output ({item.agent.name}): {_serialize(item.output)}")
 
@@ -285,7 +296,9 @@ def _build_steps(prompt: str, vars_dict: dict[str, Any]) -> list[str]:
     if isinstance(configured_steps, list) and configured_steps:
         return [str(step) for step in configured_steps]
 
-    configured_steps_json = vars_dict.get("steps_json") or vars_dict.get("task_steps_json")
+    configured_steps_json = vars_dict.get("steps_json") or vars_dict.get(
+        "task_steps_json"
+    )
     if isinstance(configured_steps_json, str) and configured_steps_json.strip():
         try:
             parsed_steps = json.loads(configured_steps_json)
@@ -313,7 +326,9 @@ def _hydrate_context_from_step(step: str, airline_context: AirlineContext) -> No
         airline_context.passenger_name = passenger_match.group(1).strip()
 
     seat_match = SEAT_NUMBER_RE.search(step)
-    if seat_match and ("move me to seat" in step.lower() or "change my seat" in step.lower()):
+    if seat_match and (
+        "move me to seat" in step.lower() or "change my seat" in step.lower()
+    ):
         airline_context.seat_number = seat_match.group(1).upper()
 
 
@@ -322,11 +337,15 @@ def _step_input(task: str, step: str, airline_context: AirlineContext) -> str:
     if airline_context.passenger_name:
         context_lines.append(f"Passenger name: {airline_context.passenger_name}")
     if airline_context.confirmation_number:
-        context_lines.append(f"Confirmation number: {airline_context.confirmation_number}")
+        context_lines.append(
+            f"Confirmation number: {airline_context.confirmation_number}"
+        )
     if airline_context.flight_number:
         context_lines.append(f"Flight number: {airline_context.flight_number}")
     if airline_context.seat_number:
-        context_lines.append(f"Current or requested seat: {airline_context.seat_number}")
+        context_lines.append(
+            f"Current or requested seat: {airline_context.seat_number}"
+        )
 
     parts = [f"Overall task: {task}"]
     if context_lines:
@@ -345,7 +364,9 @@ def _session_id(context: dict[str, Any], vars_dict: dict[str, Any]) -> str:
     return f"promptfoo-openai-agents-{evaluation_id}-{test_case_id}"
 
 
-def call_api(prompt: str, options: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+def call_api(
+    prompt: str, options: dict[str, Any], context: dict[str, Any]
+) -> dict[str, Any]:
     """Run the OpenAI Agents workflow as a Promptfoo Python provider."""
 
     options.setdefault("config", {})
@@ -397,7 +418,9 @@ def call_api(prompt: str, options: dict[str, Any], context: dict[str, Any]) -> d
                 all_raw_responses.extend(last_result.raw_responses)
                 transcript.extend(_format_transcript(index, step, last_result))
 
-        final_output = _serialize(last_result.final_output if last_result is not None else "")
+        final_output = _serialize(
+            last_result.final_output if last_result is not None else ""
+        )
         transcript.append(f"Final agent: {current_agent.name}")
         transcript.append(f"Final output: {final_output}")
         transcript.append(f"Shared context: {_serialize(airline_context.to_dict())}")
