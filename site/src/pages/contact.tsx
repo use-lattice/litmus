@@ -4,7 +4,6 @@ import Head from '@docusaurus/Head';
 import { useColorMode } from '@docusaurus/theme-common';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -21,17 +20,34 @@ import Typography from '@mui/material/Typography';
 import Layout from '@theme/Layout';
 import styles from './contact.module.css';
 
-const contactReasons = [
-  'AI red teaming and security testing',
-  'Guardrails, policy enforcement, and compliance',
-  'Prompt and model evals for production teams',
-  'Enterprise deployment, SSO, and procurement',
-];
-
-const responseExpectations = [
-  'A response from our team within one business day',
-  'A technical walkthrough tailored to your use case',
-  'Deployment guidance for cloud, VPC, or self-hosted environments',
+const testimonials = [
+  {
+    href: 'https://vimeo.com/1023317525/be082a1029',
+    logo: '/img/brands/openai-logo.svg',
+    logoAlt: 'OpenAI',
+    logoClassName: styles.openaiTestimonialLogo,
+    quote: 'Promptfoo is really powerful. It is faster and more straightforward.',
+    source: 'Build Hours',
+    cta: 'Watch video',
+  },
+  {
+    href: 'https://github.com/anthropics/courses/tree/master/prompt_evaluations',
+    logo: '/img/brands/anthropic-logo.svg',
+    logoAlt: 'Anthropic',
+    logoClassName: styles.anthropicTestimonialLogo,
+    quote: 'A streamlined solution that significantly reduces testing effort.',
+    source: 'Courses',
+    cta: 'See course',
+  },
+  {
+    href: 'https://catalog.workshops.aws/promptfoo/',
+    logo: '/img/brands/aws-logo.svg',
+    logoAlt: 'AWS',
+    logoClassName: styles.awsTestimonialLogo,
+    quote: 'Promptfoo works particularly well with Amazon Bedrock.',
+    source: 'Workshops',
+    cta: 'View workshop',
+  },
 ];
 
 function Contact(): React.ReactElement {
@@ -43,7 +59,9 @@ function Contact(): React.ReactElement {
         palette: {
           mode: isDarkTheme ? 'dark' : 'light',
           primary: {
-            main: '#0066cc',
+            main: isDarkTheme ? '#ff7a7a' : '#e53a3a',
+            dark: isDarkTheme ? '#e53a3a' : '#cb3434',
+            contrastText: isDarkTheme ? '#10191c' : '#ffffff',
           },
         },
       }),
@@ -121,17 +139,19 @@ function Contact(): React.ReactElement {
                 </Box>
 
                 <FormControl fullWidth margin="normal" variant="outlined" required>
-                  <InputLabel id="interested-in-label">Area of interest</InputLabel>
+                  <InputLabel id="interested-in-label">I'm interested in</InputLabel>
                   <Select
                     labelId="interested-in-label"
                     id="interested-in"
                     name="interested-in"
-                    label="Area of interest"
+                    label="I'm interested in"
                   >
-                    <MenuItem value="Enterprise Security">AI red teaming and security</MenuItem>
-                    <MenuItem value="AI Guardrails">Guardrails and compliance</MenuItem>
-                    <MenuItem value="Model Evaluation">Model evals and testing</MenuItem>
-                    <MenuItem value="Custom Solution">Enterprise deployment</MenuItem>
+                    <MenuItem value="Enterprise Security">
+                      Enterprise Security & Red Teaming
+                    </MenuItem>
+                    <MenuItem value="AI Guardrails">AI Guardrails & Compliance</MenuItem>
+                    <MenuItem value="Model Evaluation">Model Evaluation & Testing</MenuItem>
+                    <MenuItem value="Custom Solution">Custom Enterprise Solution</MenuItem>
                     <MenuItem value="Other">Other</MenuItem>
                   </Select>
                 </FormControl>
@@ -166,7 +186,11 @@ function Contact(): React.ReactElement {
                   </Button>
                   <Typography variant="body2" color="text.secondary">
                     Or email{' '}
-                    <Link href="mailto:inquiries@promptfoo.dev" underline="hover">
+                    <Link
+                      href="mailto:inquiries@promptfoo.dev"
+                      underline="hover"
+                      className={styles.emailLink}
+                    >
                       inquiries@promptfoo.dev
                     </Link>
                   </Typography>
@@ -177,67 +201,86 @@ function Contact(): React.ReactElement {
             <Box className={styles.sidebarColumn}>
               <Paper className={styles.sidebarCard} elevation={0}>
                 <Typography variant="h6" sx={{ fontWeight: 600, marginBottom: '1rem' }}>
-                  Common requests
-                </Typography>
-                <Box className={styles.bulletList}>
-                  {contactReasons.map((reason) => (
-                    <Box key={reason} className={styles.bulletItem}>
-                      <CheckCircleOutlineIcon className={styles.bulletIcon} />
-                      <Typography variant="body2">{reason}</Typography>
-                    </Box>
-                  ))}
-                </Box>
-              </Paper>
-
-              <Paper className={styles.sidebarCard} elevation={0}>
-                <Typography variant="h6" sx={{ fontWeight: 600, marginBottom: '1rem' }}>
-                  What to expect
-                </Typography>
-                <Box className={styles.bulletList}>
-                  {responseExpectations.map((item) => (
-                    <Box key={item} className={styles.bulletItem}>
-                      <CheckCircleOutlineIcon className={styles.bulletIcon} />
-                      <Typography variant="body2">{item}</Typography>
-                    </Box>
-                  ))}
-                </Box>
-              </Paper>
-
-              <Paper className={styles.sidebarCard} elevation={0}>
-                <Typography variant="h6" sx={{ fontWeight: 600, marginBottom: '1rem' }}>
                   Trusted by leading teams
                 </Typography>
                 <Box className={styles.logoGrid}>
-                  <img
-                    src="/img/brands/shopify-logo.svg"
-                    alt="Shopify"
-                    className={styles.brandLogo}
-                  />
-                  <img
-                    src="/img/brands/anthropic-logo.svg"
-                    alt="Anthropic"
-                    className={styles.brandLogo}
-                  />
-                  <img
-                    src="/img/brands/microsoft-logo.svg"
-                    alt="Microsoft"
-                    className={styles.brandLogo}
-                  />
-                  <img
-                    src="/img/brands/discord-logo-blue.svg"
-                    alt="Discord"
-                    className={styles.brandLogo}
-                  />
-                  <img
-                    src="/img/brands/doordash-logo.svg"
-                    alt="DoorDash"
-                    className={styles.brandLogo}
-                  />
-                  <img
-                    src="/img/brands/carvana-logo.svg"
-                    alt="Carvana"
-                    className={styles.brandLogo}
-                  />
+                  <Box className={styles.logoItem}>
+                    <img
+                      src="/img/brands/shopify-logo.svg"
+                      alt="Shopify"
+                      className={`${styles.brandLogo} ${styles.shopifyLogo}`}
+                    />
+                  </Box>
+                  <Box className={styles.logoItem}>
+                    <img
+                      src="/img/brands/anthropic-logo.svg"
+                      alt="Anthropic"
+                      className={`${styles.brandLogo} ${styles.anthropicLogo}`}
+                    />
+                  </Box>
+                  <Box className={styles.logoItem}>
+                    <img
+                      src="/img/brands/microsoft-logo.svg"
+                      alt="Microsoft"
+                      className={`${styles.brandLogo} ${styles.microsoftLogo}`}
+                    />
+                  </Box>
+                  <Box className={styles.logoItem}>
+                    <img
+                      src="/img/brands/discord-logo-blue.svg"
+                      alt="Discord"
+                      className={`${styles.brandLogo} ${styles.discordLogo}`}
+                    />
+                  </Box>
+                  <Box className={styles.logoItem}>
+                    <img
+                      src="/img/brands/doordash-logo.svg"
+                      alt="DoorDash"
+                      className={`${styles.brandLogo} ${styles.doordashLogo}`}
+                    />
+                  </Box>
+                  <Box className={styles.logoItem}>
+                    <img
+                      src="/img/brands/carvana-logo.svg"
+                      alt="Carvana"
+                      className={`${styles.brandLogo} ${styles.carvanaLogo}`}
+                    />
+                  </Box>
+                </Box>
+              </Paper>
+
+              <Paper className={styles.sidebarCard} elevation={0}>
+                <Typography variant="h6" sx={{ fontWeight: 600, marginBottom: '1rem' }}>
+                  What users say
+                </Typography>
+                <Box className={styles.testimonialList}>
+                  {testimonials.map((testimonial) => (
+                    <Box key={testimonial.source} className={styles.testimonialItem}>
+                      <Box className={styles.testimonialHeader}>
+                        <img
+                          src={testimonial.logo}
+                          alt={testimonial.logoAlt}
+                          className={testimonial.logoClassName}
+                        />
+                        <Typography variant="body2" className={styles.testimonialSource}>
+                          {testimonial.source}
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" className={styles.testimonialQuote}>
+                        "{testimonial.quote}"
+                      </Typography>
+                      <Link
+                        href={testimonial.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={styles.testimonialLink}
+                        underline="none"
+                      >
+                        {testimonial.cta}
+                        <ArrowForwardIcon className={styles.testimonialLinkIcon} />
+                      </Link>
+                    </Box>
+                  ))}
                 </Box>
               </Paper>
 

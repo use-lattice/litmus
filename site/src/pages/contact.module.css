@@ -1,8 +1,8 @@
 .pageWrapper {
   padding: 4rem 0 5rem;
   background:
-    radial-gradient(circle at top left, rgba(0, 102, 204, 0.08), transparent 32%),
-    radial-gradient(circle at top right, rgba(23, 162, 184, 0.08), transparent 28%);
+    radial-gradient(circle at top left, rgba(229, 58, 58, 0.06), transparent 32%),
+    radial-gradient(circle at top right, rgba(255, 122, 122, 0.05), transparent 28%);
 }
 
 .heroSection {
@@ -14,7 +14,7 @@
   margin-bottom: 1rem;
   font-weight: 600;
   color: var(--ifm-color-primary);
-  background: rgba(0, 102, 204, 0.08);
+  background: rgba(229, 58, 58, 0.08);
 }
 
 .heroTitle {
@@ -70,6 +70,11 @@
   margin-top: 1.5rem;
 }
 
+.emailLink {
+  color: var(--ifm-color-primary);
+  font-weight: 500;
+}
+
 .sidebarColumn {
   position: sticky;
   top: 2rem;
@@ -83,44 +88,147 @@
   border-radius: 16px;
 }
 
-.bulletList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-}
-
-.bulletItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-}
-
-.bulletIcon {
-  margin-top: 0.125rem;
-  font-size: 1.125rem;
-  color: var(--ifm-color-primary);
-  flex-shrink: 0;
-}
-
 .logoGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.25rem 1rem;
+  gap: 1.125rem 1.5rem;
   align-items: center;
 }
 
+.logoItem {
+  display: flex;
+  align-items: center;
+  height: 32px;
+}
+
 .brandLogo {
-  width: 100%;
-  max-width: 84px;
+  display: block;
+  width: auto;
+  max-width: 100%;
   height: auto;
   filter: grayscale(100%);
   opacity: 0.72;
   transition: opacity 0.2s ease;
 }
 
+.shopifyLogo {
+  max-height: 32px;
+}
+
+.anthropicLogo {
+  max-height: 14px;
+}
+
+.microsoftLogo {
+  width: 100px;
+  height: 24px;
+  object-fit: cover;
+  object-position: left center;
+}
+
+.discordLogo {
+  max-height: 20px;
+}
+
+.doordashLogo {
+  max-height: 16px;
+}
+
+.carvanaLogo {
+  width: 102px;
+  height: 24px;
+  object-fit: cover;
+  object-position: left center;
+}
+
 [data-theme='dark'] .brandLogo {
   filter: grayscale(100%) invert(100%);
   opacity: 0.8;
+}
+
+.testimonialList {
+  display: flex;
+  flex-direction: column;
+}
+
+.testimonialItem {
+  padding: 0.875rem 0;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.testimonialItem:first-child {
+  padding-top: 0;
+}
+
+.testimonialItem:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.testimonialHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 0.625rem;
+}
+
+.testimonialSource {
+  font-size: 0.875rem !important;
+  font-weight: 600;
+  color: var(--ifm-color-emphasis-800);
+}
+
+.testimonialQuote {
+  margin-bottom: 0.5rem;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.875rem !important;
+  line-height: 1.45;
+}
+
+.testimonialLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--ifm-color-primary);
+  font-size: 0.8125rem !important;
+  font-weight: 500;
+  transition: transform 0.2s ease;
+}
+
+.testimonialLink:hover {
+  transform: translateX(2px);
+}
+
+.testimonialLinkIcon {
+  font-size: 1rem !important;
+}
+
+.openaiTestimonialLogo {
+  height: 20px;
+  filter: grayscale(100%);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.anthropicTestimonialLogo {
+  height: 10px;
+  filter: grayscale(100%);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.awsTestimonialLogo {
+  height: 22px;
+  filter: grayscale(100%);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+[data-theme='dark'] .openaiTestimonialLogo,
+[data-theme='dark'] .anthropicTestimonialLogo,
+[data-theme='dark'] .awsTestimonialLogo {
+  filter: grayscale(100%) invert(100%);
+  opacity: 0.85;
 }
 
 .resourceLinks {
