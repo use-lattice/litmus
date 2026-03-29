@@ -272,6 +272,23 @@ def _parse_traceparent(traceparent: str | None) -> tuple[str, str] | None:
     return match.group(1), match.group(2)
 
 
+def _active_otel_parent() -> tuple[str, str] | None:
+    try:
+        from opentelemetry import trace as otel_trace
+    except ImportError:
+        return None
+
+    span = otel_trace.get_current_span()
+    if span is None:
+        return None
+
+    span_context = span.get_span_context()
+    if not span_context or not span_context.is_valid:
+        return None
+
+    return (f"{span_context.trace_id:032x}", f"{span_context.span_id:016x}")
+
+
 def configure_promptfoo_tracing(
     context: dict[str, Any], otlp_endpoint: str
 ) -> PromptfooTraceContext | None:
@@ -283,7 +300,7 @@ def configure_promptfoo_tracing(
         _CURRENT_PROCESSOR.shutdown()
         _CURRENT_PROCESSOR = None
 
-    parsed = _parse_traceparent(context.get("traceparent"))
+    parsed = _active_otel_parent() or _parse_traceparent(context.get("traceparent"))
     if parsed is None:
         set_trace_processors([])
         set_tracing_disabled(True)

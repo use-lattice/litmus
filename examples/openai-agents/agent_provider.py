@@ -73,11 +73,13 @@ class AirlineContext:
         passenger_name: str | None = None,
         confirmation_number: str | None = None,
         seat_number: str | None = None,
+        requested_seat_number: str | None = None,
         flight_number: str | None = None,
     ) -> None:
         self.passenger_name = passenger_name
         self.confirmation_number = confirmation_number
         self.seat_number = seat_number
+        self.requested_seat_number = requested_seat_number
         self.flight_number = flight_number
 
     def to_dict(self) -> dict[str, str | None]:
@@ -107,6 +109,36 @@ def _serialize(value: Any) -> str:
         return json.dumps(value, ensure_ascii=False, sort_keys=True)
     except TypeError:
         return str(value)
+
+
+def _normalize_confirmation_number(confirmation_number: str) -> str:
+    return confirmation_number.strip().upper()
+
+
+def _reservation_view(
+    airline_context: "AirlineContext | None", confirmation_number: str
+) -> tuple[str, dict[str, str] | None]:
+    normalized = _normalize_confirmation_number(confirmation_number)
+    reservation = RESERVATIONS.get(normalized)
+    if reservation is None:
+        return normalized, None
+
+    seat_number = reservation["seat_number"]
+    if (
+        airline_context is not None
+        and airline_context.confirmation_number == normalized
+        and airline_context.seat_number
+    ):
+        seat_number = airline_context.seat_number
+
+    return (
+        normalized,
+        {
+            "passenger_name": reservation["passenger_name"],
+            "flight_number": reservation["flight_number"],
+            "seat_number": seat_number,
+        },
+    )
 
 
 def _extract_token_usage(raw_responses: Iterable[Any]) -> dict[str, int]:
@@ -160,13 +192,15 @@ def lookup_reservation(
 ) -> dict[str, str]:
     """Look up a reservation and hydrate the shared agent context."""
 
-    reservation = RESERVATIONS.get(confirmation_number)
+    normalized_confirmation_number, reservation = _reservation_view(
+        context.context, confirmation_number
+    )
     if reservation is None:
         return {
-            "error": f"Unknown confirmation number: {confirmation_number}",
+            "error": f"Unknown confirmation number: {normalized_confirmation_number}",
         }
 
-    context.context.confirmation_number = confirmation_number
+    context.context.confirmation_number = normalized_confirmation_number
     context.context.passenger_name = reservation["passenger_name"]
     context.context.flight_number = reservation["flight_number"]
     context.context.seat_number = reservation["seat_number"]
@@ -184,18 +218,24 @@ def update_seat(
 ) -> str:
     """Update a passenger seat assignment after the booking has been located."""
 
-    reservation = RESERVATIONS.get(confirmation_number)
+    normalized_confirmation_number, reservation = _reservation_view(
+        context.context, confirmation_number
+    )
+    normalized_seat = new_seat.strip().upper()
     if reservation is None:
-        return f"Unable to update seat because {confirmation_number} was not found."
+        return (
+            f"Unable to update seat because {normalized_confirmation_number} "
+            "was not found."
+        )
 
-    reservation["seat_number"] = new_seat
-    context.context.confirmation_number = confirmation_number
+    context.context.confirmation_number = normalized_confirmation_number
     context.context.passenger_name = reservation["passenger_name"]
     context.context.flight_number = reservation["flight_number"]
-    context.context.seat_number = new_seat
+    context.context.seat_number = normalized_seat
+    context.context.requested_seat_number = None
 
     return (
-        f"Seat updated to {new_seat} for {reservation['passenger_name']} on "
+        f"Seat updated to {normalized_seat} for {reservation['passenger_name']} on "
         f"flight {reservation['flight_number']}."
     )
 
@@ -204,7 +244,7 @@ def _build_agents(model: str) -> Agent[AirlineContext]:
     faq_agent = Agent[AirlineContext](
         name="FAQ Agent",
         model=model,
-        model_settings=ModelSettings(include_usage=True),
+        model_settings=ModelSettings(include_usage=True, temperature=0),
         instructions=(
             "You answer airline policy questions. "
             "Always call faq_lookup instead of using prior knowledge. "
@@ -216,7 +256,7 @@ def _build_agents(model: str) -> Agent[AirlineContext]:
     seat_agent = Agent[AirlineContext](
         name="Seat Booking Agent",
         model=model,
-        model_settings=ModelSettings(include_usage=True),
+        model_settings=ModelSettings(include_usage=True, temperature=0),
         instructions=(
             "You handle booking lookups and seat changes. "
             "If the conversation or shared context already includes a confirmation number, "
@@ -224,6 +264,10 @@ def _build_agents(model: str) -> Agent[AirlineContext]:
             "Before updating a seat, call lookup_reservation to confirm the booking. "
             "For any seat-change request, call lookup_reservation first, then update_seat, "
             "then confirm the new seat assignment. "
+            "When the user provides a new seat number, call update_seat with it before "
+            "you claim the seat has changed. "
+            "If the user asks an airline policy question after a booking task, hand off "
+            "back to triage immediately. "
             "If the user asks about airline policy, hand off back to triage."
         ),
         tools=[lookup_reservation, update_seat],
@@ -232,13 +276,16 @@ def _build_agents(model: str) -> Agent[AirlineContext]:
     triage_agent = Agent[AirlineContext](
         name="Triage Agent",
         model=model,
-        model_settings=ModelSettings(include_usage=True),
+        model_settings=ModelSettings(include_usage=True, temperature=0),
         instructions=(
             "You route each request to the best specialist. "
             "Use the FAQ Agent for airline policies and the Seat Booking Agent for "
             "booking lookups or seat changes. If the user has already provided a "
             "confirmation number or asks to change a seat, hand off to the Seat "
             "Booking Agent immediately instead of asking follow-up questions. "
+            "Never answer airline policy questions yourself. "
+            "For any policy question, immediately hand off to the FAQ Agent without "
+            "asking permission or offering to hand off later. "
             "If the active specialist is already appropriate, let it continue."
         ),
         handoffs=[
@@ -287,6 +334,7 @@ def _build_context(vars_dict: dict[str, Any]) -> AirlineContext:
         passenger_name=vars_dict.get("passenger_name"),
         confirmation_number=vars_dict.get("confirmation_number"),
         seat_number=vars_dict.get("seat_number"),
+        requested_seat_number=vars_dict.get("requested_seat_number"),
         flight_number=vars_dict.get("flight_number"),
     )
 
@@ -329,7 +377,7 @@ def _hydrate_context_from_step(step: str, airline_context: AirlineContext) -> No
     if seat_match and (
         "move me to seat" in step.lower() or "change my seat" in step.lower()
     ):
-        airline_context.seat_number = seat_match.group(1).upper()
+        airline_context.requested_seat_number = seat_match.group(1).upper()
 
 
 def _step_input(task: str, step: str, airline_context: AirlineContext) -> str:
@@ -343,8 +391,10 @@ def _step_input(task: str, step: str, airline_context: AirlineContext) -> str:
     if airline_context.flight_number:
         context_lines.append(f"Flight number: {airline_context.flight_number}")
     if airline_context.seat_number:
+        context_lines.append(f"Current seat: {airline_context.seat_number}")
+    if airline_context.requested_seat_number:
         context_lines.append(
-            f"Current or requested seat: {airline_context.seat_number}"
+            f"Requested seat change: {airline_context.requested_seat_number}"
         )
 
     parts = [f"Overall task: {task}"]

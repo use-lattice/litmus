@@ -26,7 +26,7 @@ tests:
       testCaseId: openai-agents-python-long-horizon
     assert:
       - type: contains
-        value: 14C
+        value: Seat updated to 14C
       - type: contains
         value: 50 pounds
       - type: trajectory:tool-used
@@ -53,6 +53,11 @@ tests:
             - lookup_reservation
             - update_seat
             - faq_lookup
+      - type: trajectory:step-count
+        value:
+          type: span
+          pattern: 'agent *'
+          min: 3
       - type: trace-span-count
         value:
           pattern: 'handoff *'
@@ -75,7 +80,7 @@ tests:
       testCaseId: openai-agents-python-faq-only
     assert:
       - type: contains
-        value: wifi
+        value: Promptfoo-Air
       - type: trajectory:tool-used
         value: faq_lookup
       - type: not-trajectory:tool-used
@@ -90,4 +95,5 @@ tracing:
     http:
       enabled: true
       port: 4318
-      acceptFormats: ['json']
+      # The SDK bridge exports JSON; wrapper OTEL spans use protobuf by default.
+      acceptFormats: ['json', 'protobuf']
