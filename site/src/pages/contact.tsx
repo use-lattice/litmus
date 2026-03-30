@@ -94,11 +94,7 @@ function Contact(): React.ReactElement {
                 </Typography>
               </Box>
 
-              <form
-                action="https://submit-form.com/ghriv7voL"
-                method="POST"
-                className={styles.contactForm}
-              >
+              <form action="https://submit-form.com/ghriv7voL" className={styles.contactForm}>
                 <Box className={styles.formGrid}>
                   <TextField
                     fullWidth
@@ -108,7 +104,6 @@ function Contact(): React.ReactElement {
                     variant="outlined"
                     required
                     margin="normal"
-                    autoComplete="name"
                   />
                   <TextField
                     fullWidth
@@ -120,7 +115,6 @@ function Contact(): React.ReactElement {
                     required
                     margin="normal"
                     helperText="Please use your company email address"
-                    autoComplete="email"
                   />
                 </Box>
 
@@ -133,7 +127,6 @@ function Contact(): React.ReactElement {
                     variant="outlined"
                     required
                     margin="normal"
-                    autoComplete="organization"
                   />
                   <TextField
                     fullWidth
@@ -142,7 +135,6 @@ function Contact(): React.ReactElement {
                     label="Job title"
                     variant="outlined"
                     margin="normal"
-                    autoComplete="organization-title"
                   />
                 </Box>
 
