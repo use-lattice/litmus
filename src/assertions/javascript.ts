@@ -115,6 +115,60 @@ const validateResult = async (result: unknown): Promise<boolean | number | Gradi
   }
 };
 
+function serializeFunctionAssertion(assertion: AssertionParams['assertion']) {
+  invariant(
+    typeof assertion.value === 'function',
+    'javascript assertion must have a function value',
+  );
+  const functionString = assertion.value.toString();
+  return {
+    ...assertion,
+    value: functionString.length > 50 ? functionString.slice(0, 50) + '...' : functionString,
+  };
+}
+
+function normalizeFunctionAssertionResult(
+  assertion: AssertionParams['assertion'],
+  result: boolean | number | GradingResult,
+  inverse: boolean,
+): GradingResult {
+  const serializedAssertion = serializeFunctionAssertion(assertion);
+
+  if (typeof result === 'boolean') {
+    const pass = result !== inverse;
+    return {
+      pass,
+      score: pass ? 1 : 0,
+      reason: pass ? 'Assertion passed' : `Custom function returned ${result ? 'true' : 'false'}`,
+      assertion: serializedAssertion,
+    };
+  }
+
+  if (typeof result === 'number') {
+    const rawPass = assertion.threshold === undefined ? result > 0 : result >= assertion.threshold;
+    const pass = rawPass !== inverse;
+    return {
+      pass,
+      score: result,
+      reason: pass ? 'Assertion passed' : `Custom function returned ${rawPass ? 'true' : 'false'}`,
+      assertion: serializedAssertion,
+    };
+  }
+
+  const pass = result.pass !== inverse;
+  return {
+    ...result,
+    pass,
+    reason:
+      pass === result.pass
+        ? result.reason
+        : pass
+          ? 'Assertion passed'
+          : `Custom function returned ${result.pass ? 'true' : 'false'}`,
+    assertion: result.assertion ?? serializedAssertion,
+  };
+}
+
 export const handleJavascript = async ({
   assertion,
   renderedValue,
@@ -128,17 +182,8 @@ export const handleJavascript = async ({
   let score;
   try {
     if (typeof assertion.value === 'function') {
-      let ret = assertion.value(outputString, assertionValueContext);
-      ret = await validateResult(ret);
-      if (!ret.assertion) {
-        // Populate the assertion object if the custom function didn't return it.
-        const functionString = assertion.value.toString();
-        ret.assertion = {
-          type: 'javascript',
-          value: functionString.length > 50 ? functionString.slice(0, 50) + '...' : functionString,
-        };
-      }
-      return ret;
+      const result = await validateResult(assertion.value(outputString, assertionValueContext));
+      return normalizeFunctionAssertionResult(assertion, result, inverse);
     }
     invariant(typeof renderedValue === 'string', 'javascript assertion must have a string value');
 

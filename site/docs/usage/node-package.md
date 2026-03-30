@@ -55,20 +55,27 @@ const providerWithOptions = await loadApiProvider('azure:chat:test', {
 
 ### Assertion functions
 
-An `Assertion` can take an `AssertionFunction` as its `value`. `AssertionFunction` parameters:
+An `Assertion` can take an `AssertionFunction` as its `value`. The function receives:
 
-- `output`: the LLM output
-- `testCase`: the test case
-- `assertion`: the assertion object
+- `output`: the LLM output string
+- `context`: execution context, including `prompt`, `vars`, `test`, `config`, `provider`, and `providerResponse`
 
 <details>
 <summary>Type definition</summary>
 ```typescript
+type AssertionFunctionResult = boolean | number | GradingResult;
+
 type AssertionFunction = (
-  output: string,
-  testCase: AtomicTestCase,
-  assertion: Assertion,
-) => Promise<GradingResult>;
+output: string,
+context: {
+prompt?: string;
+vars: Record<string, unknown>;
+test: AtomicTestCase;
+config?: Record<string, any>;
+provider?: unknown;
+providerResponse?: unknown;
+},
+) => AssertionFunctionResult | Promise<AssertionFunctionResult>;
 
 interface GradingResult {
 // Whether the test passed or failed

@@ -700,6 +700,122 @@ describe('JavaScript file references', () => {
     });
   });
 
+  it.each([
+    ['true', () => true, true, 1],
+    ['false', () => false, false, 0],
+    ['a number', () => 0.75, true, 0.75],
+  ])('should normalize direct function-valued javascript assertions that return %s', async (_type, value, expectedPass, expectedScore) => {
+    const output = 'Expected output';
+    const assertion: Assertion = {
+      type: 'javascript',
+      value,
+    };
+
+    const result: GradingResult = await runAssertion({
+      prompt: 'Some prompt',
+      provider: new OpenAiChatCompletionProvider('gpt-4o-mini'),
+      assertion,
+      test: {} as AtomicTestCase,
+      providerResponse: { output },
+    });
+
+    expect(result).toMatchObject({
+      pass: expectedPass,
+      score: expectedScore,
+      reason: expectedPass ? 'Assertion passed' : 'Custom function returned false',
+      assertion: {
+        type: 'javascript',
+        value: expect.any(String),
+      },
+    });
+    expect(typeof result.assertion?.value).toBe('string');
+  });
+
+  it('should honor threshold when a direct function-valued javascript assertion returns a number', async () => {
+    const output = 'Expected output';
+    const assertion: Assertion = {
+      type: 'javascript',
+      value: () => 0.25,
+      threshold: 0.5,
+    };
+
+    const result: GradingResult = await runAssertion({
+      prompt: 'Some prompt',
+      provider: new OpenAiChatCompletionProvider('gpt-4o-mini'),
+      assertion,
+      test: {} as AtomicTestCase,
+      providerResponse: { output },
+    });
+
+    expect(result).toMatchObject({
+      pass: false,
+      score: 0.25,
+      reason: 'Custom function returned false',
+      assertion: {
+        type: 'javascript',
+        value: expect.any(String),
+      },
+    });
+  });
+
+  it.each([
+    [
+      'boolean results for not-javascript assertions',
+      {
+        type: 'not-javascript',
+        value: () => true,
+      } as Assertion,
+      false,
+      0,
+      'Custom function returned true',
+    ],
+    [
+      'numeric results for not-javascript assertions',
+      {
+        type: 'not-javascript',
+        value: () => 0.25,
+        threshold: 0.5,
+      } as Assertion,
+      true,
+      0.25,
+      'Assertion passed',
+    ],
+    [
+      'GradingResult results for not-javascript assertions',
+      {
+        type: 'not-javascript',
+        value: () => ({
+          pass: true,
+          score: 0.75,
+          reason: 'Custom reason',
+        }),
+      } as Assertion,
+      false,
+      0.75,
+      'Custom function returned true',
+    ],
+  ])('should honor inverse mode for direct function-valued javascript assertions with %s', async (_type, assertion, expectedPass, expectedScore, expectedReason) => {
+    const output = 'Expected output';
+
+    const result: GradingResult = await runAssertion({
+      prompt: 'Some prompt',
+      provider: new OpenAiChatCompletionProvider('gpt-4o-mini'),
+      assertion,
+      test: {} as AtomicTestCase,
+      providerResponse: { output },
+    });
+
+    expect(result).toMatchObject({
+      pass: expectedPass,
+      score: expectedScore,
+      reason: expectedReason,
+      assertion: {
+        type: 'not-javascript',
+        value: expect.any(String),
+      },
+    });
+  });
+
   it('should pass when the multiline javascript assertion passes', async () => {
     const output = 'Expected output';
 
