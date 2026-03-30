@@ -125,10 +125,42 @@ export class OTLPReceiver {
   }
 
   private setupMiddleware(): void {
-    // Register both OTLP body parsers; route handling enforces configured formats.
-    this.app.use(express.json({ limit: '10mb', type: 'application/json' }));
-    this.app.use(express.raw({ type: 'application/x-protobuf', limit: '10mb' }));
-    logger.debug('[OtlpReceiver] Middleware configured for JSON and protobuf');
+    // Reject disabled content types before any body parser runs.
+    this.app.use('/v1/traces', (req, res, next) => {
+      if (req.method !== 'POST') {
+        next();
+        return;
+      }
+
+      const format = getRequestFormat(req.headers['content-type']);
+      if (!format || !this.acceptFormats.includes(format)) {
+        res.status(415).json({ error: 'Unsupported content type' });
+        return;
+      }
+
+      next();
+    });
+
+    // Keep parser selection dynamic so setAcceptFormats() still works on the singleton receiver.
+    this.app.use(
+      '/v1/traces',
+      express.json({
+        limit: '10mb',
+        type: (req) =>
+          this.acceptFormats.includes('json') &&
+          getRequestFormat(req.headers['content-type']) === 'json',
+      }),
+    );
+    this.app.use(
+      '/v1/traces',
+      express.raw({
+        limit: '10mb',
+        type: (req) =>
+          this.acceptFormats.includes('protobuf') &&
+          getRequestFormat(req.headers['content-type']) === 'protobuf',
+      }),
+    );
+    logger.debug('[OtlpReceiver] Middleware configured for accepted OTLP formats');
   }
 
   private setupRoutes(): void {

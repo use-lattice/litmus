@@ -434,6 +434,20 @@ describe('OTLPReceiver', () => {
       expect(mockTraceStore.addSpans).not.toHaveBeenCalled();
     });
 
+    it('should reject malformed json with 415 when json is disabled', async () => {
+      receiver = new OTLPReceiver({ acceptFormats: ['protobuf'] });
+      (receiver as any).traceStore = mockTraceStore;
+
+      const response = await request(receiver.getApp())
+        .post('/v1/traces')
+        .set('Content-Type', 'application/json')
+        .send('{ invalid json')
+        .expect(415);
+
+      expect(response.body).toEqual({ error: 'Unsupported content type' });
+      expect(mockTraceStore.addSpans).not.toHaveBeenCalled();
+    });
+
     it('should reject invalid protobuf data', async () => {
       const response = await request(receiver.getApp())
         .post('/v1/traces')
