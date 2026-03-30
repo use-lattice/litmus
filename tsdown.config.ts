@@ -13,7 +13,7 @@ const packageJson = JSON.parse(readFileSync('./package.json', 'utf8'));
 // CLI entrypoint can evaluate before importing any other modules.
 const enginesNode: string = packageJson.engines?.node ?? '>=20.0.0';
 let nodeEngineComparatorSets: Array<
-  Array<{ operator: '' | '>' | '>=' | '<' | '<='; version: string }>
+  Array<{ operator: '' | '=' | '>' | '>=' | '<' | '<='; version: string }>
 >;
 try {
   nodeEngineComparatorSets = new semver.Range(enginesNode).set.map((comparatorSet) =>
