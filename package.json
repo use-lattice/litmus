@@ -2,7 +2,7 @@
   "name": "@use-lattice/litmus",
   "description": "LLM eval & testing toolkit",
   "author": "Nithin Srinivasan",
-  "version": "0.121.3",
+  "version": "0.122.0",
   "license": "MIT",
   "type": "module",
   "repository": {
