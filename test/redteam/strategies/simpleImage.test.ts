@@ -1,0 +1,183 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import logger from '../../../src/logger';
+import { addImageToBase64 } from '../../../src/redteam/strategies/simpleImage';
+
+import type { TestCase } from '../../../src/types/index';
+
+vi.mock('sharp', () => {
+  return {
+    default: vi.fn().mockImplementation(function () {
+      return {
+        png: vi.fn().mockReturnValue({
+          toBuffer: vi
+            .fn()
+            .mockResolvedValue(
+              Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]),
+            ),
+        }),
+      };
+    }),
+  };
+});
+
+vi.mock('../../../src/logger', () => ({
+  default: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    level: 'info',
+  },
+}));
+
+describe('Image strategy', () => {
+  const testCases: TestCase[] = [
+    {
+      vars: {
+        prompt: 'This is a test prompt',
+      },
+      assert: [
+        {
+          type: 'equals',
+          value: 'expected',
+          metric: 'test-metric',
+        },
+        {
+          type: 'promptfoo:redteam:jailbreak',
+          value: 'should update this metric',
+          metric: 'jailbreak-metric',
+        },
+      ],
+    },
+    {
+      vars: {
+        prompt: 'Another test prompt',
+      },
+    },
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  describe('addImageToBase64', () => {
+    it('should convert text to images and return updated test cases', async () => {
+      const result = await addImageToBase64(testCases, 'prompt');
+
+      expect(result).toHaveLength(testCases.length);
+
+      expect(result[0]).toMatchObject({
+        assert: [
+          {
+            type: 'equals',
+            value: 'expected',
+            metric: 'test-metric',
+          },
+          {
+            type: 'promptfoo:redteam:jailbreak',
+            value: 'should update this metric',
+            metric: 'jailbreak/Image-Encoded',
+          },
+        ],
+        metadata: expect.any(Object),
+        vars: {
+          image_text: 'This is a test prompt',
+          prompt: expect.stringMatching(/^i/),
+        },
+      });
+
+      expect(result[1].vars?.image_text).toBe('Another test prompt');
+      expect(result[1].vars?.prompt).toMatch(/^i/);
+    });
+
+    it('should handle test cases without assert property', async () => {
+      const testCasesWithoutAssert: TestCase[] = [
+        {
+          vars: {
+            prompt: 'Test without assert',
+          },
+        },
+      ];
+
+      const result = await addImageToBase64(testCasesWithoutAssert, 'prompt');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].vars?.prompt).toMatch(/^i/);
+      expect(result[0].vars?.image_text).toBe('Test without assert');
+      expect(result[0].assert).toBeUndefined();
+    });
+
+    it('should throw an error when test case vars is missing', async () => {
+      const invalidTestCases = [{} as unknown as TestCase];
+
+      await expect(addImageToBase64(invalidTestCases, 'prompt')).rejects.toThrow(
+        /testCase.vars is required/,
+      );
+    });
+
+    it('should handle errors in textToImage gracefully', async () => {
+      const problematicCase: TestCase = {
+        vars: {
+          prompt: '',
+        },
+      };
+
+      const result = await addImageToBase64([problematicCase], 'prompt');
+
+      expect(result).toHaveLength(1);
+    });
+
+    it('should process all test cases', async () => {
+      await addImageToBase64(testCases, 'prompt');
+      // Progress bars were replaced with no-ops; just verify it doesn't throw
+    });
+
+    it('should update assertion metrics with Image-Encoded suffix', async () => {
+      const result = await addImageToBase64([testCases[0]], 'prompt');
+
+      const assertions = result[0].assert;
+      expect(assertions?.[0].metric).toBe('test-metric');
+      expect(assertions?.[1].metric).toBe('jailbreak/Image-Encoded');
+    });
+
+    it('should create metadata if not present in the original test case', async () => {
+      const testCaseWithoutMetadata: TestCase = {
+        vars: {
+          prompt: 'No metadata',
+        },
+      };
+
+      const result = await addImageToBase64([testCaseWithoutMetadata], 'prompt');
+
+      expect(result[0].metadata).toEqual({
+        strategyId: 'image',
+        originalText: 'No metadata',
+      });
+    });
+
+    it('should preserve existing metadata in the test case', async () => {
+      const testCaseWithMetadata: TestCase = {
+        vars: {
+          prompt: 'With metadata',
+        },
+        metadata: {
+          source: 'test',
+          category: 'image-test',
+        },
+      };
+
+      const result = await addImageToBase64([testCaseWithMetadata], 'prompt');
+
+      expect(result[0].metadata).toEqual({
+        source: 'test',
+        category: 'image-test',
+        strategyId: 'image',
+        originalText: 'With metadata',
+      });
+    });
+  });
+});
